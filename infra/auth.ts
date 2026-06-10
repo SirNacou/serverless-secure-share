@@ -16,7 +16,11 @@ export function createAuth() {
     const userPoolClient = new aws.cognito.UserPoolClient("app-user-pool-client", {
         name: "secure-share-web-client",
         userPoolId: userPool.id,
-        explicitAuthFlows: ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"],
+        explicitAuthFlows: [
+            "ALLOW_USER_SRP_AUTH", 
+            "ALLOW_USER_PASSWORD_AUTH", 
+            "ALLOW_REFRESH_TOKEN_AUTH"
+        ],
     });
 
     return { userPool, userPoolClient };

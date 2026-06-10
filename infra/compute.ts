@@ -22,7 +22,7 @@ export function createCompute(args: ComputeArgs) {
 
     new aws.iam.RolePolicyAttachment("lambda-s3-access", {
         role: lambdaRole.name,
-        policyArn: "arn:aws:iam::aws:policy/AmazonS3FullAccess", 
+        policyArn: "arn:aws:iam::aws:policy/AmazonS3FullAccess",
     });
 
     const dynamoPolicy = new aws.iam.RolePolicy("lambda-dynamo-policy", {
@@ -39,10 +39,10 @@ export function createCompute(args: ComputeArgs) {
 
     const generateUrlLambda = new aws.lambda.Function("generateUrlFunction", {
         code: new pulumi.asset.AssetArchive({
-            "index.mjs": new pulumi.asset.FileAsset("./src/api/index.mjs"),
+            ".": new pulumi.asset.FileArchive("./src/api"),
         }),
         runtime: "nodejs24.x",
-        handler: "index.handler", 
+        handler: "index.handler",
         role: lambdaRole.arn,
         environment: {
             variables: {
@@ -95,7 +95,7 @@ export function createCompute(args: ComputeArgs) {
         action: "lambda:InvokeFunction",
         function: generateUrlLambda.name,
         principal: "apigateway.amazonaws.com",
-        sourceArn: pulumi.interpolate`${httpApi.executionArn}/*/*`,
+        sourceArn: pulumi.interpolate`${httpApi.executionArn}/*`,
     });
 
     return { apiUrl: httpApi.apiEndpoint };
