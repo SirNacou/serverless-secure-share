@@ -1,7 +1,7 @@
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
 const s3Client = new S3Client({
 	region: process.env.AWS_REGION || "ap-southeast-1",
@@ -19,7 +19,7 @@ export const handler = async (event) => {
 			return {
 				statusCode: 500,
 				body: JSON.stringify({
-					error: "System configuration error: missing environment variables.",
+					error: "System configuration error: missing variables.",
 				}),
 			};
 		}
@@ -37,17 +37,13 @@ export const handler = async (event) => {
 		if (!filename || !contentType) {
 			return {
 				statusCode: 400,
-				body: JSON.stringify({
-					error:
-						"Validation failed: 'filename' and 'contentType' are required.",
-				}),
+				body: JSON.stringify({ error: "Validation failed." }),
 			};
 		}
 
 		const uniqueId = randomUUID();
 		const s3ObjectKey = `uploads/${uniqueId}-${filename}`;
 
-		// 1. Generate the S3 Pre-signed URL
 		const s3Command = new PutObjectCommand({
 			Bucket: BUCKET_NAME,
 			Key: s3ObjectKey,
@@ -57,20 +53,19 @@ export const handler = async (event) => {
 			expiresIn: 900,
 		});
 
-		// 2. Persist metadata record to DynamoDB for audit tracking
-		const currentEpochTime = Date.now().toString(); // DynamoDB Client expects numbers as strings inside the type descriptor
-		const timestampIso = new Date().toISOString();
+		// Calculate TTL: Current time + 30 days (in seconds)
+		const ttlEpochSeconds = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
 
 		const dynamoCommand = new PutItemCommand({
 			TableName: TABLE_NAME,
 			Item: {
 				link_id: { S: uniqueId },
-				timestamp: { N: currentEpochTime },
 				filename: { S: filename },
 				fileKey: { S: s3ObjectKey },
 				contentType: { S: contentType },
 				status: { S: "PENDING_UPLOAD" },
-				createdAt: { S: timestampIso }, // Keep the human-readable string as a non-key attribute
+				createdAt: { S: new Date().toISOString() },
+				ttl: { N: ttlEpochSeconds.toString() }, // DynamoDB drops this record automatically at this timestamp
 			},
 		});
 		await dynamoClient.send(dynamoCommand);
@@ -82,7 +77,6 @@ export const handler = async (event) => {
 				uploadId: uniqueId,
 				uploadUrl,
 				fileKey: s3ObjectKey,
-				expiresInSeconds: 900,
 			}),
 		};
 	} catch (error) {

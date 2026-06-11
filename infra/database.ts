@@ -1,17 +1,18 @@
 import * as aws from "@pulumi/aws";
 
 export function createDatabase() {
-    const auditTable = new aws.dynamodb.Table("AuditLogTable", {
-        attributes: [
-            { name: "link_id", type: "S" },
-            { name: "timestamp", type: "N" }
-        ],
-        hashKey: "link_id",
-        rangeKey: "timestamp",
-        billingMode: "PAY_PER_REQUEST",
-    });
+	const auditTable = new aws.dynamodb.Table("audit-log-table", {
+		attributes: [
+			{ name: "link_id", type: "S" }, // Sole primary key
+		],
+		hashKey: "link_id",
+		billingMode: "PAY_PER_REQUEST",
+		// Enable TTL automatically on the 'ttl' attribute name
+		ttl: {
+			attributeName: "ttl",
+			enabled: true,
+		},
+	});
 
-    // Aurora DSQL infrastructure definition will look clean appended here later
-
-    return { auditTable };
+	return { auditTable };
 }
