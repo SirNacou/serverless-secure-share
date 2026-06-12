@@ -41,8 +41,12 @@ export const handler = async (event) => {
 			};
 		}
 
+		// Strip out directories, relative paths, and malicious characters
+		const safeFilename = basename(filename).replace(/[^a-zA-Z0-9.-]/g, "_");
+
 		const uniqueId = randomUUID();
-		const s3ObjectKey = `uploads/${uniqueId}-${filename}`;
+		// Ensure the safe filename retains its expected extension layout safely
+		const s3ObjectKey = `uploads/${uniqueId}-${safeFilename}`;
 
 		const s3Command = new PutObjectCommand({
 			Bucket: BUCKET_NAME,

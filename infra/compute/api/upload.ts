@@ -15,44 +15,29 @@ export function createUploadRoute(args: UploadArgs) {
 		}),
 	});
 
-	new aws.iam.RolePolicyAttachment("lambda-logs", {
+	new aws.iam.RolePolicy("upload-api-policy", {
 		role: lambdaRole.name,
-		policyArn:
-			"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-	});
-
-	// Enforce Write-Only database scope
-	new aws.iam.RolePolicy("lambda-dynamo-policy", {
-		role: lambdaRole.name,
-		policy: pulumi.all([args.tableName]).apply(([tableName]) =>
-			JSON.stringify({
-				Version: "2012-10-17",
-				Statement: [
-					{
-						Effect: "Allow",
-						Action: ["dynamodb:PutItem"],
-						Resource: [`arn:aws:dynamodb:*:*:table/${tableName}`],
-					},
-				],
-			}),
-		),
-	});
-
-	// Enforce Write-Only bucket scope
-	new aws.iam.RolePolicy("lambda-s3-policy", {
-		role: lambdaRole.name,
-		policy: pulumi.all([args.bucketId]).apply(([bucketId]) =>
-			JSON.stringify({
-				Version: "2012-10-17",
-				Statement: [
-					{
-						Effect: "Allow",
-						Action: ["s3:PutObject"],
-						Resource: [`arn:aws:s3:::${bucketId}/*`],
-					},
-				],
-			}),
-		),
+		policy: pulumi
+			.all([args.tableName, args.bucketId])
+			.apply(([tableName, bucketId]) =>
+				JSON.stringify({
+					Version: "2012-10-17",
+					Statement: [
+						{
+							Sid: "DynamoDBWriteAccess",
+							Effect: "Allow",
+							Action: ["dynamodb:PutItem"],
+							Resource: [`arn:aws:dynamodb:*:*:table/${tableName}`],
+						},
+						{
+							Sid: "S3RestrictedWriteAccess",
+							Effect: "Allow",
+							Action: ["s3:PutObject"],
+							Resource: [`arn:aws:s3:::${bucketId}/uploads/*`],
+						},
+					],
+				}),
+			),
 	});
 
 	const generateUrlLambda = new aws.lambda.Function("generateUrlFunction", {
