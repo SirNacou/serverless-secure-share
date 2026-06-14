@@ -40,4 +40,6 @@ createWorkerCompute({
 });
 
 // Outputs
+export const cognitoPoolId = auth.userPool.id;
+export const cognitoClientId = auth.userPoolClient.id;
 export const publicApiEndpoint = gatewaySystem.httpApi.apiEndpoint;

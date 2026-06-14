@@ -1,24 +1,13 @@
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
-import { routeTree } from './routeTree.gen'
-
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { Amplify } from 'aws-amplify'
+import { awsConfig } from './config/aws-config'
 import {
   getContext,
 } from './integrations/tanstack-query/root-provider'
+import { routeTree } from './routeTree.gen'
 
-Amplify.configure({
-  Auth: {
-    Cognito: {
-      userPoolId: process.env.REACT_APP_COGNITO_USER_POOL_ID!,
-      userPoolClientId: process.env.REACT_APP_COGNITO_USER_POOL_CLIENT_ID!,
-      identityPoolId: process.env.REACT_APP_COGNITO_IDENTITY_POOL_ID!,
-      loginWith: {
-        username: true
-      }
-    }
-  }
-})
+Amplify.configure(awsConfig)
 
 export function getRouter() {
   const context = getContext()
