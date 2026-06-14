@@ -7,8 +7,9 @@ export const awsConfig: ResourcesConfig = {
 			userPoolId: "ap-southeast-1_uhJSMv7Ru",
 
 			loginWith: {
-				username: true,
+				email: true,
 			},
+			signUpVerificationMethod: "link",
 		},
 	},
 };
