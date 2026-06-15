@@ -9,7 +9,7 @@ export const awsConfig: ResourcesConfig = {
 			loginWith: {
 				email: true,
 			},
-			signUpVerificationMethod: "link",
+			signUpVerificationMethod: "code",
 		},
 	},
 };
