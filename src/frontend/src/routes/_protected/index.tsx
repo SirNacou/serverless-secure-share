@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_protected/")({
-	component: RouteComponent,
+	beforeLoad: async (ctx) => {
+		throw redirect({
+			to: "/share",
+			replace: true,
+		});
+	},
 });
-
-function RouteComponent() {
-	return <div>Hello "/_protected/"!</div>;
-}

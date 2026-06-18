@@ -1,3 +1,5 @@
+import { ThemeProvider } from "#/components/theme-provider";
+import { TooltipProvider } from "#/components/ui/tooltip";
 import { awsConfig } from "#/config/aws-config";
 import { Authenticator } from "@aws-amplify/ui-react";
 import { TanStackDevtools } from "@tanstack/react-devtools";
@@ -44,12 +46,16 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en">
+		<html lang="en" suppressHydrationWarning>
 			<head>
 				<HeadContent />
 			</head>
 			<body>
-				<Authenticator>{children}</Authenticator>
+				<ThemeProvider defaultTheme="system" storageKey="theme">
+					<Authenticator>
+						<TooltipProvider>{children}</TooltipProvider>
+					</Authenticator>
+				</ThemeProvider>
 				<TanStackDevtools
 					config={{
 						position: "bottom-right",
