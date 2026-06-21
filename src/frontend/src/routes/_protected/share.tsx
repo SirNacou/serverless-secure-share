@@ -3,6 +3,7 @@ import {
 	DropzoneContent,
 	DropzoneEmptyState,
 } from "#/components/kibo-ui/dropzone";
+import { Button } from "#/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
 import { Textarea } from "#/components/ui/textarea";
 import { createFileRoute } from "@tanstack/react-router";
@@ -16,18 +17,18 @@ function RouteComponent() {
 	return (
 		<div className="h-full grid grid-cols-2 grid-rows-[1fr_auto] gap-0 border-b border-r border-border">
 			{/* Left Item (Desktop) / Top Item (Mobile) */}
-			<div className="col-span-2 md:col-span-1 border-t border-l border-border p-4">
+			<div className="col-span-2 md:col-span-1 border-t border-l border-border p-2">
 				<Input />
 			</div>
 
 			{/* Right Item (Desktop) / Middle Item (Mobile) */}
-			<div className="col-span-2 md:col-span-1 border-t border-l border-border p-4">
+			<div className="col-span-2 md:col-span-1 border-t border-l border-border p-2">
 				Right
 			</div>
 
 			{/* Bottom Item */}
-			<div className="col-span-2 border-t border-l border-border p-4">
-				Bottom
+			<div className="col-span-2 border-t border-l border-border p-2 flex justify-end">
+				<Button className="cursor-pointer">Share</Button>
 			</div>
 		</div>
 	);
