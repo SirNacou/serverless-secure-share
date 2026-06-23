@@ -1,93 +1,88 @@
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "node:crypto";
+import { basename } from "node:path";
 
-const s3Client = new S3Client({
-	region: process.env.AWS_REGION || "ap-southeast-1",
-});
-const dynamoClient = new DynamoDBClient({
-	region: process.env.AWS_REGION || "ap-southeast-1",
-});
-
-const BUCKET_NAME = process.env.BUCKET_NAME;
-const TABLE_NAME = process.env.TABLE_NAME;
+const s3Client = new S3Client({ region: process.env.AWS_REGION });
+const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 export const handler = async (event) => {
-	try {
-		if (!BUCKET_NAME || !TABLE_NAME) {
-			return {
-				statusCode: 500,
-				body: JSON.stringify({
-					error: "System configuration error: missing variables.",
-				}),
-			};
-		}
+    try {
+        // 1. Extract Cognito Identity from JWT Authorizer Context
+        const ownerUsername = event.requestContext.authorizer.jwt.claims.username;
+        
+        // 2. Parse Frontend Configuration Data
+        const body = JSON.parse(event.body);
+        const { payloadType, filename, contentType, textContent, visibility, targetUsers, lifespanHours } = body;
 
-		if (!event.body) {
-			return {
-				statusCode: 400,
-				body: JSON.stringify({ error: "Missing request body." }),
-			};
-		}
+        const linkId = randomUUID();
+        
+        // 3. Compute TTL (Current Epoch time in seconds + Lifespan Window)
+        const ttlTimestamp = Math.floor(Date.now() / 1000) + (parseInt(lifespanHours) * 3600);
 
-		const body = JSON.parse(event.body);
-		const { filename, contentType } = body;
+        // Map allowed users array into DynamoDB String Set format
+        const allowedUsersAttribute = targetUsers && targetUsers.length > 0 
+            ? { SS: targetUsers } 
+            : { NULL: true };
 
-		if (!filename || !contentType) {
-			return {
-				statusCode: 400,
-				body: JSON.stringify({ error: "Validation failed." }),
-			};
-		}
+        // 4. BRANCH LOGIC: TEXT VS FILE
+        if (payloadType === "text") {
+            // Direct write for text payloads—no S3 roundtrip needed
+            await dynamoClient.send(new PutItemCommand({
+                TableName: process.env.TABLE_NAME,
+                Item: {
+                    "link_id": { S: linkId },
+                    "owner_username": { S: ownerUsername },
+                    "asset_type": { S: "TEXT" },
+                    "payload_text": { S: textContent },
+                    "visibility": { S: visibility },
+                    "allowed_users": allowedUsersAttribute,
+                    "status": { S: "AVAILABLE" }, // Instantly ready
+                    "ttl": { N: ttlTimestamp.toString() }
+                }
+            }));
 
-		// Strip out directories, relative paths, and malicious characters
-		const safeFilename = basename(filename).replace(/[^a-zA-Z0-9.-]/g, "_");
+            return {
+                statusCode: 200,
+                headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+                body: JSON.stringify({ uploadId: linkId, directText: true })
+            };
+        } else {
+            // Standard Pre-signed URL loop for physical files
+            const safeFilename = basename(filename).replace(/[^a-zA-Z0-9.-]/g, "_");
+            const s3ObjectKey = `uploads/${linkId}-${safeFilename}`;
 
-		const uniqueId = randomUUID();
-		// Ensure the safe filename retains its expected extension layout safely
-		const s3ObjectKey = `uploads/${uniqueId}-${safeFilename}`;
+            await dynamoClient.send(new PutItemCommand({
+                TableName: process.env.TABLE_NAME,
+                Item: {
+                    "link_id": { S: linkId },
+                    "owner_username": { S: ownerUsername },
+                    "asset_type": { S: "FILE" },
+                    "fileKey": { S: s3ObjectKey },
+                    "filename": { S: safeFilename },
+                    "visibility": { S: visibility },
+                    "allowed_users": allowedUsersAttribute,
+                    "status": { S: "PENDING_UPLOAD" }, // Waiting on S3 bucket notification
+                    "ttl": { N: ttlTimestamp.toString() }
+                }
+            }));
 
-		const s3Command = new PutObjectCommand({
-			Bucket: BUCKET_NAME,
-			Key: s3ObjectKey,
-			ContentType: contentType,
-		});
-		const uploadUrl = await getSignedUrl(s3Client, s3Command, {
-			expiresIn: 900,
-		});
+            const s3Command = new PutObjectCommand({
+                Bucket: process.env.BUCKET_NAME,
+                Key: s3ObjectKey,
+                ContentType: contentType
+            });
+            const uploadUrl = await getSignedUrl(s3Client, s3Command, { expiresIn: 300 });
 
-		// Calculate TTL: Current time + 30 days (in seconds)
-		const ttlEpochSeconds = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
-
-		const dynamoCommand = new PutItemCommand({
-			TableName: TABLE_NAME,
-			Item: {
-				link_id: { S: uniqueId },
-				filename: { S: filename },
-				fileKey: { S: s3ObjectKey },
-				contentType: { S: contentType },
-				status: { S: "PENDING_UPLOAD" },
-				createdAt: { S: new Date().toISOString() },
-				ttl: { N: ttlEpochSeconds.toString() }, // DynamoDB drops this record automatically at this timestamp
-			},
-		});
-		await dynamoClient.send(dynamoCommand);
-
-		return {
-			statusCode: 200,
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				uploadId: uniqueId,
-				uploadUrl,
-				fileKey: s3ObjectKey,
-			}),
-		};
-	} catch (error) {
-		console.error("Pipeline Failure:", error);
-		return {
-			statusCode: 500,
-			body: JSON.stringify({ error: "Internal Server Error" }),
-		};
-	}
+            return {
+                statusCode: 200,
+                headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+                body: JSON.stringify({ uploadId: linkId, uploadUrl })
+            };
+        }
+    } catch (error) {
+        console.error(error);
+        return { statusCode: 500, body: JSON.stringify({ error: "Internal Configuration Failure" }) };
+    }
 };
