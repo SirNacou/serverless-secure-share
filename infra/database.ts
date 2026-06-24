@@ -12,6 +12,8 @@ export function createDatabase() {
 			attributeName: "ttl",
 			enabled: true,
 		},
+		streamEnabled: true,
+		streamViewType: "OLD_IMAGE"
 	});
 
 	return { auditTable };

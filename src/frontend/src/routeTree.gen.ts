@@ -12,9 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProtectedRouteRouteImport } from './routes/_protected/route'
 import { Route as ProtectedIndexRouteImport } from './routes/_protected/index'
-import { Route as ProtectedShareRouteImport } from './routes/_protected/share'
 import { Route as ProtectedHistoryRouteImport } from './routes/_protected/history'
 import { Route as ProtectedExploreRouteImport } from './routes/_protected/explore'
+import { Route as ProtectedShareIndexRouteImport } from './routes/_protected/share/index'
+import { Route as ProtectedShareShareIdRouteImport } from './routes/_protected/share/$shareId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -30,11 +31,6 @@ const ProtectedIndexRoute = ProtectedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
-const ProtectedShareRoute = ProtectedShareRouteImport.update({
-  id: '/share',
-  path: '/share',
-  getParentRoute: () => ProtectedRouteRoute,
-} as any)
 const ProtectedHistoryRoute = ProtectedHistoryRouteImport.update({
   id: '/history',
   path: '/history',
@@ -45,20 +41,32 @@ const ProtectedExploreRoute = ProtectedExploreRouteImport.update({
   path: '/explore',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
+const ProtectedShareIndexRoute = ProtectedShareIndexRouteImport.update({
+  id: '/share/',
+  path: '/share/',
+  getParentRoute: () => ProtectedRouteRoute,
+} as any)
+const ProtectedShareShareIdRoute = ProtectedShareShareIdRouteImport.update({
+  id: '/share/$shareId',
+  path: '/share/$shareId',
+  getParentRoute: () => ProtectedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ProtectedIndexRoute
   '/login': typeof LoginRoute
   '/explore': typeof ProtectedExploreRoute
   '/history': typeof ProtectedHistoryRoute
-  '/share': typeof ProtectedShareRoute
+  '/share/$shareId': typeof ProtectedShareShareIdRoute
+  '/share/': typeof ProtectedShareIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/explore': typeof ProtectedExploreRoute
   '/history': typeof ProtectedHistoryRoute
-  '/share': typeof ProtectedShareRoute
   '/': typeof ProtectedIndexRoute
+  '/share/$shareId': typeof ProtectedShareShareIdRoute
+  '/share': typeof ProtectedShareIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -66,22 +74,30 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_protected/explore': typeof ProtectedExploreRoute
   '/_protected/history': typeof ProtectedHistoryRoute
-  '/_protected/share': typeof ProtectedShareRoute
   '/_protected/': typeof ProtectedIndexRoute
+  '/_protected/share/$shareId': typeof ProtectedShareShareIdRoute
+  '/_protected/share/': typeof ProtectedShareIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/explore' | '/history' | '/share'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/explore'
+    | '/history'
+    | '/share/$shareId'
+    | '/share/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/explore' | '/history' | '/share' | '/'
+  to: '/login' | '/explore' | '/history' | '/' | '/share/$shareId' | '/share'
   id:
     | '__root__'
     | '/_protected'
     | '/login'
     | '/_protected/explore'
     | '/_protected/history'
-    | '/_protected/share'
     | '/_protected/'
+    | '/_protected/share/$shareId'
+    | '/_protected/share/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -112,13 +128,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
-    '/_protected/share': {
-      id: '/_protected/share'
-      path: '/share'
-      fullPath: '/share'
-      preLoaderRoute: typeof ProtectedShareRouteImport
-      parentRoute: typeof ProtectedRouteRoute
-    }
     '/_protected/history': {
       id: '/_protected/history'
       path: '/history'
@@ -133,21 +142,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedExploreRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
+    '/_protected/share/': {
+      id: '/_protected/share/'
+      path: '/share'
+      fullPath: '/share/'
+      preLoaderRoute: typeof ProtectedShareIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/share/$shareId': {
+      id: '/_protected/share/$shareId'
+      path: '/share/$shareId'
+      fullPath: '/share/$shareId'
+      preLoaderRoute: typeof ProtectedShareShareIdRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
   }
 }
 
 interface ProtectedRouteRouteChildren {
   ProtectedExploreRoute: typeof ProtectedExploreRoute
   ProtectedHistoryRoute: typeof ProtectedHistoryRoute
-  ProtectedShareRoute: typeof ProtectedShareRoute
   ProtectedIndexRoute: typeof ProtectedIndexRoute
+  ProtectedShareShareIdRoute: typeof ProtectedShareShareIdRoute
+  ProtectedShareIndexRoute: typeof ProtectedShareIndexRoute
 }
 
 const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedExploreRoute: ProtectedExploreRoute,
   ProtectedHistoryRoute: ProtectedHistoryRoute,
-  ProtectedShareRoute: ProtectedShareRoute,
   ProtectedIndexRoute: ProtectedIndexRoute,
+  ProtectedShareShareIdRoute: ProtectedShareShareIdRoute,
+  ProtectedShareIndexRoute: ProtectedShareIndexRoute,
 }
 
 const ProtectedRouteRouteWithChildren = ProtectedRouteRoute._addFileChildren(

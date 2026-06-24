@@ -13,6 +13,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { Amplify } from "aws-amplify";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
+import { Toaster } from "#/components/ui/sonner";
 
 Amplify.configure(awsConfig);
 
@@ -56,6 +57,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						<TooltipProvider>{children}</TooltipProvider>
 					</Authenticator>
 				</ThemeProvider>
+				<Toaster />
 				<TanStackDevtools
 					config={{
 						position: "bottom-right",

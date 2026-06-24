@@ -11,7 +11,7 @@ export function createApiGateway(args: GatewayArgs) {
 		protocolType: "HTTP",
 		corsConfiguration: {
 			allowOrigins: ["http://localhost:3000"],
-			allowMethods: ["POST", "GET", "OPTIONS"], // Added GET globally
+			allowMethods: ["POST", "GET", "OPTIONS"],
 			allowHeaders: ["content-type", "authorization"],
 			maxAge: 300,
 		},

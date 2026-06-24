@@ -12,19 +12,37 @@ const dynamoClient = new DynamoDBClient({
 const BUCKET_NAME = process.env.BUCKET_NAME;
 const TABLE_NAME = process.env.TABLE_NAME;
 
+/**
+ * Manual lightweight decoding loop for standard JWT payloads.
+ * Prevents needing bulky node_modules packaging inside simple Lambda layers.
+ */
+function decodeCognitoToken(authHeader) {
+	if (!authHeader) return null;
+	try {
+		const token = authHeader.replace("Bearer ", "");
+		const base64Url = token.split(".")[1];
+		const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+		const jsonPayload = Buffer.from(base64, "base64").toString("utf8");
+		return JSON.parse(jsonPayload);
+	} catch (e) {
+		console.warn("JWT parsing exception caught:", e);
+		return null;
+	}
+}
+
 export const handler = async (event) => {
 	try {
-		// Extract link_id from the path parameters (e.g., /api/download/{id})
-		const linkId = event.pathParameters?.id;
+		// Adjust parameter token reading to match front-end path convention: /api/share/{shareId}
+		const linkId = event.pathParameters?.shareId;
 
 		if (!linkId) {
 			return {
 				statusCode: 400,
-				body: JSON.stringify({ error: "Missing file identifier." }),
+				body: JSON.stringify({ error: "Missing link identifier." }),
 			};
 		}
 
-		// 1. Fetch metadata from DynamoDB
+		// 1. Fetch metadata record from DynamoDB
 		const dbResult = await dynamoClient.send(
 			new GetItemCommand({
 				TableName: TABLE_NAME,
@@ -35,47 +53,108 @@ export const handler = async (event) => {
 		if (!dbResult.Item) {
 			return {
 				statusCode: 404,
-				body: JSON.stringify({ error: "File not found or expired." }),
+				body: JSON.stringify({ error: "Resource not found or expired." }),
 			};
 		}
 
-		const fileMetadata = dbResult.Item;
-		const fileStatus = fileMetadata.status?.S;
-		const fileKey = fileMetadata.fileKey?.S;
-		const filename = fileMetadata.filename?.S;
+		const item = dbResult.Item;
+		const assetType = item.asset_type?.S; // "FILE" or "TEXT"
+		const visibility = item.visibility?.S; // "public" or "private"
+		const ownerUsername = item.owner_username?.S;
+		const allowedUsers = item.allowed_users?.SS || [];
+		const ttl = item.ttl?.N ? parseInt(item.ttl.N, 10) : null;
 
-		// Ensure the file upload was actually completed and verified
-		if (fileStatus !== "AVAILABLE" || !fileKey) {
+		// Force rigorous application-level validation against un-purged expired records
+		if (ttl && Math.floor(Date.now() / 1000) > ttl) {
 			return {
-				statusCode: 400,
-				body: JSON.stringify({ error: "File is not ready for download." }),
+				statusCode: 404,
+				body: JSON.stringify({ error: "Resource has expired." }),
 			};
 		}
 
-		// 2. Generate a secure, short-lived S3 Pre-signed GET URL (valid for 5 minutes)
-		const s3Command = new GetObjectCommand({
-			Bucket: BUCKET_NAME,
-			Key: fileKey,
-			ResponseContentDisposition: `attachment; filename="${filename}"`, // Forces browser download
-		});
+		// 2. RUN APPLICATION-LEVEL AUTHENTICATION CHECK FOR PRIVATE LIFECYCLES
+		if (visibility === "private") {
+			const authHeader =
+				event.headers?.authorization || event.headers?.Authorization;
+			const decodedToken = decodeCognitoToken(authHeader);
+			const currentUsername = decodedToken?.username;
 
-		const downloadUrl = await getSignedUrl(s3Client, s3Command, {
-			expiresIn: 300,
-		});
+			if (!currentUsername) {
+				return {
+					statusCode: 403,
+					body: JSON.stringify({
+						error: "Access Denied: Private asset authorization header missing.",
+					}),
+				};
+			}
+
+			const isOwner = ownerUsername === currentUsername;
+			const isAllowed = allowedUsers.includes(currentUsername);
+
+			if (!isOwner && !isAllowed) {
+				return {
+					statusCode: 403,
+					body: JSON.stringify({
+						error:
+							"Access Denied: User identity not authorized to read this share.",
+					}),
+				};
+			}
+		}
+
+		// 3. COMPILE RESPONSE STRUCTURE BY ASSET SCHEMATIC TYPE
+		const responseBody = {
+			link_id: linkId,
+			share_name: item.share_name?.S || "Untitled Share",
+			asset_type: assetType,
+			visibility: visibility,
+		};
+
+		if (assetType === "TEXT") {
+			responseBody.payload_text = item.payload_text?.S || "";
+		} else if (assetType === "FILE") {
+			const fileStatus = item.status?.S;
+			const fileKey = item.fileKey?.S;
+			const filename = item.filename?.S;
+
+			// Enforce upload confirmation guardrails for physical files
+			if (fileStatus !== "AVAILABLE" || !fileKey) {
+				return {
+					statusCode: 400,
+					body: JSON.stringify({
+						error: "File state sync unconfirmed by pipeline.",
+					}),
+				};
+			}
+
+			// Generate temporary secure binary access channel
+			const s3Command = new GetObjectCommand({
+				Bucket: BUCKET_NAME,
+				Key: fileKey,
+				ResponseContentDisposition: `attachment; filename="${filename}"`,
+			});
+
+			responseBody.filename = filename;
+			responseBody.downloadUrl = await getSignedUrl(s3Client, s3Command, {
+				expiresIn: 300,
+			});
+		}
 
 		return {
 			statusCode: 200,
 			headers: {
 				"Content-Type": "application/json",
-				"Access-Control-Allow-Origin": "http://localhost:3000", // Maintain CORS compliance
+				"Access-Control-Allow-Origin": "http://localhost:3000",
 			},
-			body: JSON.stringify({ downloadUrl, filename }),
+			body: JSON.stringify(responseBody),
 		};
 	} catch (error) {
-		console.error("Download Pipeline Failure:", error);
+		console.error("Unified Delivery Pipeline Crash:", error);
 		return {
 			statusCode: 500,
-			body: JSON.stringify({ error: "Internal Server Error" }),
+			body: JSON.stringify({
+				error: "Internal operational exception encountered.",
+			}),
 		};
 	}
 };

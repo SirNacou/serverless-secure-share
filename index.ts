@@ -1,6 +1,5 @@
 import { createAuth } from "./infra/auth";
 import { createDownloadRoute } from "./infra/compute/api/download";
-// Import the split API subsystem functions
 import { createApiGateway } from "./infra/compute/api/gateway";
 import { createUploadRoute } from "./infra/compute/api/upload";
 import { createWorkerCompute } from "./infra/compute/workers";
@@ -28,7 +27,6 @@ createUploadRoute({
 
 createDownloadRoute({
 	httpApi: gatewaySystem.httpApi,
-	apiAuthorizer: gatewaySystem.apiAuthorizer,
 	bucketId: storage.bucket.id,
 	tableName: database.auditTable.name,
 });
@@ -37,6 +35,7 @@ createDownloadRoute({
 createWorkerCompute({
 	bucket: storage.bucket,
 	tableName: database.auditTable.name,
+	tableStreamArn: database.auditTable.streamArn,
 });
 
 // Outputs

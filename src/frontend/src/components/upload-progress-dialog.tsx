@@ -1,8 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
-import { useEffect } from "react";
+import { AlertCircle, Check, CheckCircle2, Copy } from "lucide-react";
+import { useState } from "react";
 
 export type UploadStatus = "idle" | "uploading" | "success" | "error";
 export type PayloadType = "file" | "text";
@@ -11,62 +12,112 @@ interface UploadProgressDialogProps {
 	status: UploadStatus;
 	payloadType: PayloadType;
 	progress: number;
+	shareUrl?: string; // Add your public link string parameter
 	onClose: () => void;
 	errorMessage?: string;
-	successDuration?: number;
 }
 
 export function UploadProgressDialog({
 	status,
 	payloadType,
 	progress,
+	shareUrl,
 	onClose,
 	errorMessage,
-	successDuration = 2000,
 }: UploadProgressDialogProps) {
 	const isOpen = status !== "idle";
+	const [copied, setCopied] = useState(false);
 
-	// Internalize the success auto-close window mechanic
-	useEffect(() => {
-		if (status === "success") {
-			const timer = setTimeout(() => {
-				onClose();
-			}, successDuration);
-
-			return () => clearTimeout(timer);
-		}
-	}, [status, onClose, successDuration]);
+	const handleCopy = async () => {
+		if (!shareUrl) return;
+		await navigator.clipboard.writeText(shareUrl);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	};
 
 	return (
 		<Dialog
 			open={isOpen}
-			// Prevent manual backdrop dismissal during active network data transfers
 			onOpenChange={(open) => {
 				!open && status !== "uploading" && onClose();
 			}}
 		>
-			<DialogContent className="sm:max-w-[280px] p-8 rounded-2xl border border-border bg-card text-card-foreground outline-none flex flex-col items-center justify-center min-h-[240px]">
+			<DialogContent
+				className="sm:max-w-xs p-6 rounded-2xl border border-border bg-card text-card-foreground outline-none flex flex-col items-center justify-center min-h-[240px]"
+				showCloseButton={status !== "uploading"}
+			>
 				{/* ACTIVE PROCESSING STATE */}
 				{status === "uploading" && (
-					<div className="flex flex-col items-center justify-center space-y-4 w-full">
+					<div className="flex flex-col items-center justify-center space-y-5 w-full py-4">
 						{payloadType === "file" ? (
-							<div className="flex flex-col items-center select-none animate-pulse">
-								<span className="text-6xl font-black tracking-tighter text-primary">
-									{progress}%
-								</span>
-								<span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mt-2">
+							<>
+								<div className="relative inline-flex items-center justify-center">
+									<svg width={120} height={120} className="-rotate-90">
+										<title>progress</title>
+										<circle
+											cx={60}
+											cy={60}
+											r={50}
+											fill="none"
+											stroke="currentColor"
+											strokeWidth={8}
+											className="text-muted/15"
+										/>
+										<circle
+											cx={60}
+											cy={60}
+											r={50}
+											fill="none"
+											stroke="currentColor"
+											strokeWidth={8}
+											strokeLinecap="round"
+											strokeDasharray={314.159}
+											strokeDashoffset={314.159 - (progress / 100) * 314.159}
+											className="text-primary transition-all duration-300 ease-out"
+										/>
+									</svg>
+									<span className="absolute text-2xl font-bold tabular-nums select-none">
+										{progress}%
+									</span>
+								</div>
+								<span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
 									Uploading File
 								</span>
-							</div>
+							</>
 						) : (
-							<div className="flex flex-col items-center space-y-3 w-full">
-								<div className="relative flex items-center justify-center h-16 w-16">
-									<div className="absolute h-full w-full rounded-full bg-primary/10 animate-ping duration-1000" />
-									<div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-										<div className="h-2 w-2 rounded-full bg-background animate-scale-up" />
-									</div>
+							<div className="flex flex-col items-center space-y-5 w-full">
+								<div className="relative inline-flex items-center justify-center">
+									<svg
+										width={120}
+										height={120}
+										className="animate-spin"
+										style={{ animationDuration: "1.5s" }}
+									>
+										<title>progress</title>
+										<circle
+											cx={60}
+											cy={60}
+											r={50}
+											fill="none"
+											stroke="currentColor"
+											strokeWidth={8}
+											className="text-muted/15"
+										/>
+										<circle
+											cx={60}
+											cy={60}
+											r={50}
+											fill="none"
+											stroke="currentColor"
+											strokeWidth={8}
+											strokeLinecap="round"
+											strokeDasharray={120}
+											strokeDashoffset={0}
+											className="text-primary"
+										/>
+									</svg>
 								</div>
-								<span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground pt-1">
+								<span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
 									Saving Text
 								</span>
 							</div>
@@ -74,20 +125,48 @@ export function UploadProgressDialog({
 					</div>
 				)}
 
-				{/* COMPLETION STATUS STATE */}
+				{/* COMPLETION SUCCESS STATE (With Copy Action) */}
 				{status === "success" && (
-					<div className="flex flex-col items-center space-y-2 animate-in fade-in zoom-in-95 duration-150">
-						<CheckCircle2 className="h-14 w-14 text-emerald-500 stroke-[1.2]" />
-						<span className="text-[11px] font-bold uppercase tracking-widest text-emerald-500 mt-2">
+					<div className="flex flex-col items-center space-y-4 animate-in fade-in zoom-in-95 duration-150 w-full text-center">
+						<CheckCircle2 className="h-12 w-12 text-emerald-500 stroke-[1.2]" />
+						<span className="text-[11px] font-bold uppercase tracking-widest text-emerald-500">
 							Share Ready
 						</span>
+
+						{shareUrl && (
+							<div className="w-full space-y-2 pt-2">
+								<div className="flex items-center gap-1.5 bg-muted/40 p-1.5 pl-3 rounded-lg border border-border/60 text-xs text-muted-foreground font-mono select-all truncate">
+									<span className="truncate flex-1 text-left">{shareUrl}</span>
+									<Button
+										size="icon"
+										variant="ghost"
+										className="h-7 w-7 shrink-0"
+										onClick={handleCopy}
+									>
+										{copied ? (
+											<Check className="h-3.5 w-3.5 text-emerald-500" />
+										) : (
+											<Copy className="h-3.5 w-3.5" />
+										)}
+									</Button>
+								</div>
+							</div>
+						)}
+
+						<Button
+							variant="secondary"
+							className="w-full text-xs h-9 mt-2"
+							onClick={onClose}
+						>
+							Done
+						</Button>
 					</div>
 				)}
 
-				{/* INTERRUPTED ERROR STATE */}
+				{/* ERROR STATE */}
 				{status === "error" && (
 					<div className="flex flex-col items-center space-y-2 text-center animate-in fade-in zoom-in-95 duration-150 w-full">
-						<AlertCircle className="h-14 w-14 text-destructive stroke-[1.2]" />
+						<AlertCircle className="h-12 w-12 text-destructive stroke-[1.2]" />
 						<span className="text-[11px] font-bold uppercase tracking-widest text-destructive mt-2">
 							Upload Failed
 						</span>
@@ -96,6 +175,13 @@ export function UploadProgressDialog({
 								{errorMessage}
 							</p>
 						)}
+						<Button
+							variant="outline"
+							className="w-full text-xs h-9 mt-4"
+							onClick={onClose}
+						>
+							Close
+						</Button>
 					</div>
 				)}
 			</DialogContent>
