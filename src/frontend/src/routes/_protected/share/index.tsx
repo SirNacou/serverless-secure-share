@@ -200,7 +200,7 @@ function RouteComponent() {
 			<div className="col-span-2 md:col-span-1 border-t border-l border-border p-4 space-y-4 bg-muted/10">
 				<form.Field name="name">
 					{(field) => (
-						<div className="space-y-1.5">
+						<div className="bg-card border border-border rounded-xl p-4 space-y-2">
 							<label
 								htmlFor={field.name}
 								className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"

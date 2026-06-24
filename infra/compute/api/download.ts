@@ -5,6 +5,8 @@ interface DownloadArgs {
     httpApi: aws.apigatewayv2.Api;
     bucketId: pulumi.Input<string>;
     tableName: pulumi.Input<string>;
+    auditQueueUrl: pulumi.Input<string>;
+    auditQueueArn: pulumi.Input<string>;
 }
 
 export function createDownloadRoute(args: DownloadArgs) {
@@ -51,6 +53,22 @@ export function createDownloadRoute(args: DownloadArgs) {
         ),
     });
 
+    new aws.iam.RolePolicy("download-sqs-policy", {
+        role: downloadRole.name,
+        policy: pulumi.all([args.auditQueueArn]).apply(([queueArn]) =>
+            JSON.stringify({
+                Version: "2012-10-17",
+                Statement: [
+                    {
+                        Effect: "Allow",
+                        Action: ["sqs:SendMessage"],
+                        Resource: [queueArn],
+                    },
+                ],
+            }),
+        ),
+    });
+
     const downloadUrlLambda = new aws.lambda.Function("downloadUrlFunction", {
         code: new pulumi.asset.AssetArchive({
             ".": new pulumi.asset.FileArchive("./src/api"),
@@ -62,6 +80,7 @@ export function createDownloadRoute(args: DownloadArgs) {
             variables: {
                 BUCKET_NAME: args.bucketId,
                 TABLE_NAME: args.tableName,
+                AUDIT_QUEUE_URL: args.auditQueueUrl,
             },
         },
     });

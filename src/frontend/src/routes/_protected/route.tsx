@@ -4,10 +4,10 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { fetchAuthSession } from "aws-amplify/auth";
 
 export const Route = createFileRoute("/_protected")({
-	beforeLoad: async () => {
+	beforeLoad: async ({ location }) => {
 		const session = await fetchAuthSession();
 		if (!session.tokens?.accessToken) {
-			throw redirect({ to: "/login" });
+			throw redirect({ to: "/login", search: { redirectTo: location.pathname } });
 		}
 	},
 	component: RouteComponent,

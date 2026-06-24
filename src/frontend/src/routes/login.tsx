@@ -7,6 +7,9 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
+	validateSearch: (search: Record<string, string | undefined>) => ({
+		redirectTo: search.redirectTo ?? undefined,
+	}),
 	component: RouteComponent,
 });
 
@@ -31,11 +34,13 @@ function RouteComponent() {
 	const [code, setCode] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 
+	const { redirectTo } = Route.useSearch();
+
 	useEffect(() => {
 		if (isAuthenticated) {
-			router.navigate({ to: "/share", replace: true });
+			router.navigate({ to: redirectTo || "/share", replace: true });
 		}
-	}, [isAuthenticated, router]);
+	}, [isAuthenticated, redirectTo, router]);
 
 	useEffect(() => {
 		return () => clearError();

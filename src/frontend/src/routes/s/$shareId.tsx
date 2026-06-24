@@ -92,13 +92,13 @@ function ShareViewComponent() {
 			</header>
 			<div className="flex-1 flex items-center justify-center p-4">
 				<div className="w-full max-w-2xl bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
-					<div className="border-b border-border/60 pb-4 space-y-1">
-						<span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/5 px-2.5 py-1 rounded-full border border-primary/10">
-							{data.asset_type} Secure Share
-						</span>
-						<h1 className="text-2xl font-black tracking-tight pt-2">
+					<div className="border-b border-border/60 pb-4 flex items-start justify-between gap-4">
+						<h1 className="text-2xl font-black tracking-tight">
 							{data.share_name}
 						</h1>
+						<span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/5 px-2.5 py-1 rounded-full border border-primary/10">
+							{data.asset_type}
+						</span>
 					</div>
 
 					{data.asset_type === "TEXT" && data.payload_text && (

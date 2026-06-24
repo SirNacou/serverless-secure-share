@@ -3,13 +3,16 @@ import { createDownloadRoute } from "./infra/compute/api/download";
 import { createApiGateway } from "./infra/compute/api/gateway";
 import { createUploadRoute } from "./infra/compute/api/upload";
 import { createWorkerCompute } from "./infra/compute/workers";
+import { createAuditWorker } from "./infra/compute/audit";
 import { createDatabase } from "./infra/database";
+import { createMessaging } from "./infra/messaging";
 import { createStorage } from "./infra/storage";
 
-// 1. Storage and Identity Layers
+// 1. Storage, Identity, and Messaging Layers
 const storage = createStorage();
 const database = createDatabase();
 const auth = createAuth();
+const messaging = createMessaging();
 
 // 2. Instantiate Base Router Ingress
 const gatewaySystem = createApiGateway({
@@ -22,20 +25,28 @@ createUploadRoute({
 	httpApi: gatewaySystem.httpApi,
 	apiAuthorizer: gatewaySystem.apiAuthorizer,
 	bucketId: storage.bucket.id,
-	tableName: database.auditTable.name,
+	tableName: database.metadataTable.name,
 });
 
 createDownloadRoute({
 	httpApi: gatewaySystem.httpApi,
 	bucketId: storage.bucket.id,
-	tableName: database.auditTable.name,
+	tableName: database.metadataTable.name,
+	auditQueueUrl: messaging.auditQueueUrl,
+	auditQueueArn: messaging.auditQueue.arn,
 });
 
 // 4. Asynchronous Background Core Loop
 createWorkerCompute({
 	bucket: storage.bucket,
-	tableName: database.auditTable.name,
-	tableStreamArn: database.auditTable.streamArn,
+	tableName: database.metadataTable.name,
+	tableStreamArn: database.metadataTable.streamArn,
+});
+
+// 5. Audit Log Processor
+createAuditWorker({
+	auditQueue: messaging.auditQueue,
+	auditTableName: database.auditTable.name,
 });
 
 // Outputs

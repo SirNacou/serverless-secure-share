@@ -1,6 +1,8 @@
 import { DynamoDBClient, GetItemCommand } from "@aws-sdk/client-dynamodb";
+import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { randomUUID } from "node:crypto";
 
 const s3Client = new S3Client({
 	region: process.env.AWS_REGION || "ap-southeast-1",
@@ -8,14 +10,14 @@ const s3Client = new S3Client({
 const dynamoClient = new DynamoDBClient({
 	region: process.env.AWS_REGION || "ap-southeast-1",
 });
+const sqsClient = new SQSClient({
+	region: process.env.AWS_REGION || "ap-southeast-1",
+});
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
 const TABLE_NAME = process.env.TABLE_NAME;
+const AUDIT_QUEUE_URL = process.env.AUDIT_QUEUE_URL;
 
-/**
- * Manual lightweight decoding loop for standard JWT payloads.
- * Prevents needing bulky node_modules packaging inside simple Lambda layers.
- */
 function decodeCognitoToken(authHeader) {
 	if (!authHeader) return null;
 	try {
@@ -30,9 +32,27 @@ function decodeCognitoToken(authHeader) {
 	}
 }
 
+function emitAudit(linkId, actor, action, status) {
+	if (!AUDIT_QUEUE_URL) return;
+	sqsClient
+		.send(
+			new SendMessageCommand({
+				QueueUrl: AUDIT_QUEUE_URL,
+				MessageBody: JSON.stringify({
+					log_id: randomUUID(),
+					link_id: linkId,
+					actor,
+					timestamp: Date.now(),
+					action,
+					status,
+				}),
+			}),
+		)
+		.catch((err) => console.warn("Audit emit failed (non-blocking):", err));
+}
+
 export const handler = async (event) => {
 	try {
-		// Adjust parameter token reading to match front-end path convention: /api/share/{shareId}
 		const linkId = event.pathParameters?.shareId;
 
 		if (!linkId) {
@@ -42,7 +62,12 @@ export const handler = async (event) => {
 			};
 		}
 
-		// 1. Fetch metadata record from DynamoDB
+		const authHeader =
+			event.headers?.authorization || event.headers?.Authorization;
+		const decodedToken = decodeCognitoToken(authHeader);
+		const currentUsername = decodedToken?.username;
+		const actor = currentUsername || "GUEST";
+
 		const dbResult = await dynamoClient.send(
 			new GetItemCommand({
 				TableName: TABLE_NAME,
@@ -51,6 +76,7 @@ export const handler = async (event) => {
 		);
 
 		if (!dbResult.Item) {
+			emitAudit(linkId, actor, "METADATA_LOAD", "EXPIRED");
 			return {
 				statusCode: 404,
 				body: JSON.stringify({ error: "Resource not found or expired." }),
@@ -58,28 +84,23 @@ export const handler = async (event) => {
 		}
 
 		const item = dbResult.Item;
-		const assetType = item.asset_type?.S; // "FILE" or "TEXT"
-		const visibility = item.visibility?.S; // "public" or "private"
+		const assetType = item.asset_type?.S;
+		const visibility = item.visibility?.S;
 		const ownerUsername = item.owner_username?.S;
 		const allowedUsers = item.allowed_users?.SS || [];
 		const ttl = item.ttl?.N ? parseInt(item.ttl.N, 10) : null;
 
-		// Force rigorous application-level validation against un-purged expired records
 		if (ttl && Math.floor(Date.now() / 1000) > ttl) {
+			emitAudit(linkId, actor, "METADATA_LOAD", "EXPIRED");
 			return {
 				statusCode: 404,
 				body: JSON.stringify({ error: "Resource has expired." }),
 			};
 		}
 
-		// 2. RUN APPLICATION-LEVEL AUTHENTICATION CHECK FOR PRIVATE LIFECYCLES
 		if (visibility === "private") {
-			const authHeader =
-				event.headers?.authorization || event.headers?.Authorization;
-			const decodedToken = decodeCognitoToken(authHeader);
-			const currentUsername = decodedToken?.username;
-
 			if (!currentUsername) {
+				emitAudit(linkId, actor, "METADATA_LOAD", "UNAUTHORIZED_403");
 				return {
 					statusCode: 403,
 					body: JSON.stringify({
@@ -92,6 +113,7 @@ export const handler = async (event) => {
 			const isAllowed = allowedUsers.includes(currentUsername);
 
 			if (!isOwner && !isAllowed) {
+				emitAudit(linkId, actor, "METADATA_LOAD", "UNAUTHORIZED_403");
 				return {
 					statusCode: 403,
 					body: JSON.stringify({
@@ -102,7 +124,6 @@ export const handler = async (event) => {
 			}
 		}
 
-		// 3. COMPILE RESPONSE STRUCTURE BY ASSET SCHEMATIC TYPE
 		const responseBody = {
 			link_id: linkId,
 			share_name: item.share_name?.S || "Untitled Share",
@@ -117,8 +138,8 @@ export const handler = async (event) => {
 			const fileKey = item.fileKey?.S;
 			const filename = item.filename?.S;
 
-			// Enforce upload confirmation guardrails for physical files
 			if (fileStatus !== "AVAILABLE" || !fileKey) {
+				emitAudit(linkId, actor, "DOWNLOAD_EXECUTION", "EXPIRED");
 				return {
 					statusCode: 400,
 					body: JSON.stringify({
@@ -127,7 +148,6 @@ export const handler = async (event) => {
 				};
 			}
 
-			// Generate temporary secure binary access channel
 			const s3Command = new GetObjectCommand({
 				Bucket: BUCKET_NAME,
 				Key: fileKey,
@@ -139,6 +159,10 @@ export const handler = async (event) => {
 				expiresIn: 300,
 			});
 		}
+
+		const action =
+			assetType === "FILE" ? "DOWNLOAD_EXECUTION" : "METADATA_LOAD";
+		emitAudit(linkId, actor, action, "SUCCESS");
 
 		return {
 			statusCode: 200,
