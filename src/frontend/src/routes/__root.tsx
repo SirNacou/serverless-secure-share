@@ -1,19 +1,17 @@
-import { AuthProvider, useAuth } from "#/lib/auth-context";
 import { ThemeProvider } from "#/components/theme-provider";
 import { Toaster } from "#/components/ui/sonner";
 import { TooltipProvider } from "#/components/ui/tooltip";
 import { awsConfig } from "#/config/aws-config";
+import { AuthProvider } from "#/lib/auth-context";
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { useQueryClient } from "@tanstack/react-query";
+import { FormDevtoolsPanel } from "@tanstack/react-form-devtools";
 import {
 	createRootRouteWithContext,
 	HeadContent,
 	Scripts,
-	useRouter,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { Amplify } from "aws-amplify";
-import { useEffect, useRef } from "react";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
@@ -53,23 +51,6 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 	shellComponent: RootDocument,
 });
 
-function AuthGate() {
-	const router = useRouter();
-	const queryClient = useQueryClient();
-	const { isAuthenticated } = useAuth();
-	const wasAuthed = useRef(isAuthenticated);
-
-	useEffect(() => {
-		if (isAuthenticated && !wasAuthed.current) {
-			router.invalidate().catch(console.error);
-			queryClient.invalidateQueries().catch(console.error);
-		}
-		wasAuthed.current = isAuthenticated;
-	}, [isAuthenticated, router, queryClient]);
-
-	return null;
-}
-
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en" suppressHydrationWarning>
@@ -79,7 +60,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			<body>
 				<ThemeProvider defaultTheme="system" storageKey="theme">
 					<AuthProvider>
-						<AuthGate />
 						<TooltipProvider>{children}</TooltipProvider>
 					</AuthProvider>
 				</ThemeProvider>
@@ -89,11 +69,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						position: "bottom-right",
 					}}
 					plugins={[
+						TanStackQueryDevtools,
 						{
 							name: "Tanstack Router",
 							render: <TanStackRouterDevtoolsPanel />,
 						},
-						TanStackQueryDevtools,
+						{
+							name: "Tanstack Form",
+							render: <FormDevtoolsPanel />,
+						},
 					]}
 				/>
 				<Scripts />

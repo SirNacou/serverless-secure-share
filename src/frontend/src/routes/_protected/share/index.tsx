@@ -10,7 +10,7 @@ import { VisibilitySelector } from "#/components/visibility-selector";
 import { api } from "#/lib/api";
 import type { ApiErrorResponse, ShareUploadResponse } from "#/types/api";
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import z from "zod";
@@ -63,6 +63,7 @@ function RouteComponent() {
 	const [uploadProgress, setUploadProgress] = useState<number>(0);
 	const [apiError, setApiError] = useState<string>("");
 	const [generatedLink, setGeneratedLink] = useState<string>("");
+	const router = useRouter();
 
 	const form = useForm({
 		defaultValues,
@@ -140,7 +141,11 @@ function RouteComponent() {
 					setUploadProgress(100);
 				}
 
-				const publicShareUrl = `${window.location.origin}/share/${data.uploadId}`;
+				const { pathname } = router.buildLocation({
+					to: "/s/$shareId",
+					params: { shareId: data.uploadId },
+				});
+				const publicShareUrl = `${window.location.origin}${pathname}`;
 				setGeneratedLink(publicShareUrl);
 				setUploadStatus("success");
 			} catch (error: unknown) {

@@ -27,6 +27,7 @@
     "@tanstack/react-db": "latest",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-form": "latest",
+    "@tanstack/react-form-devtools": "^0.2.29",
     "@tanstack/react-query": "latest",
     "@tanstack/react-query-devtools": "latest",
     "@tanstack/react-router": "latest",
