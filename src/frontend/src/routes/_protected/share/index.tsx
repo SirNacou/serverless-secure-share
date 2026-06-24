@@ -1,4 +1,8 @@
 import { LifespanSelect, lifespanOptions } from "#/components/lifespan-select";
+import {
+	MaxDownloadsSelect,
+	maxDownloadsOptions,
+} from "#/components/max-downloads-select";
 import { ShareContentForm } from "#/components/share-content-form";
 import { Button } from "#/components/ui/button";
 import {
@@ -28,6 +32,7 @@ const shareFormSchema = z
 		visibility: z.enum(["private", "public"]),
 		selectedUsers: z.array(z.string()),
 		lifespan: z.string(),
+		maxDownloads: z.string(),
 	})
 	.superRefine((data, ctx) => {
 		if (data.payloadType === "file" && data.files.length < 1) {
@@ -56,6 +61,7 @@ const defaultValues: ShareFormValues = {
 	visibility: "private",
 	selectedUsers: [],
 	lifespan: lifespanOptions[0].value,
+	maxDownloads: maxDownloadsOptions[0].value,
 };
 
 function RouteComponent() {
@@ -94,6 +100,7 @@ function RouteComponent() {
 							targetUsers:
 								value.visibility === "private" ? value.selectedUsers : [],
 							lifespanHours: value.lifespan,
+							maxDownloads: value.maxDownloads,
 						},
 					})
 					.json<ShareUploadResponse | ApiErrorResponse>();
@@ -247,6 +254,15 @@ function RouteComponent() {
 				<form.Field name="lifespan">
 					{(field) => (
 						<LifespanSelect
+							value={field.state.value}
+							onChange={(val) => field.handleChange(val)}
+						/>
+					)}
+				</form.Field>
+
+				<form.Field name="maxDownloads">
+					{(field) => (
+						<MaxDownloadsSelect
 							value={field.state.value}
 							onChange={(val) => field.handleChange(val)}
 						/>

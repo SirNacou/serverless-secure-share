@@ -27,6 +27,7 @@ export const handler = async (event) => {
 			visibility,
 			targetUsers,
 			lifespanHours,
+			maxDownloads,
 		} = body;
 
 		const linkId = randomUUID();
@@ -60,6 +61,8 @@ export const handler = async (event) => {
 						allowed_users: allowedUsersAttribute,
 						status: { S: "AVAILABLE" },
 						ttl: { N: ttlTimestamp.toString() },
+						max_downloads: maxDownloads && parseInt(maxDownloads, 10) > 0 ? { N: maxDownloads } : { NULL: true },
+						download_count: { N: "0" },
 					},
 				}),
 			);
@@ -91,6 +94,8 @@ export const handler = async (event) => {
 						allowed_users: allowedUsersAttribute,
 						status: { S: "PENDING_UPLOAD" },
 						ttl: { N: ttlTimestamp.toString() },
+						max_downloads: maxDownloads && parseInt(maxDownloads, 10) > 0 ? { N: maxDownloads } : { NULL: true },
+						download_count: { N: "0" },
 					},
 				}),
 			);

@@ -46,9 +46,17 @@ export const Route = createFileRoute("/s/$shareId")({
 
 function ShareViewComponent() {
 	const { shareId } = Route.useParams();
+	const loaderData = Route.useLoaderData();
 	const [copied, setCopied] = useState(false);
 
-	const { isPending, isError, data } = useQuery(getShareQueryOptions(shareId));
+	const isFile = loaderData?.asset_type === "FILE";
+	const { isPending, isError, data } = useQuery({
+		...getShareQueryOptions(shareId),
+		staleTime: isFile ? 4 * 60 * 1000 : Infinity,
+		refetchOnMount: isFile,
+		refetchOnWindowFocus: isFile,
+		refetchOnReconnect: isFile,
+	});
 
 	if (isPending) {
 		return (

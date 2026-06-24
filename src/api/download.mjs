@@ -1,6 +1,6 @@
-import { DynamoDBClient, GetItemCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, GetItemCommand, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "node:crypto";
 
@@ -49,6 +49,28 @@ function emitAudit(linkId, actor, action, status) {
 			}),
 		)
 		.catch((err) => console.warn("Audit emit failed (non-blocking):", err));
+}
+
+function markConsumed(linkId, fileKey) {
+	const updates = {
+		TableName: TABLE_NAME,
+		Key: { link_id: { S: linkId } },
+		UpdateExpression: "SET #statusAttr = :newStatus",
+		ExpressionAttributeNames: { "#statusAttr": "status" },
+		ExpressionAttributeValues: { ":newStatus": { S: "CONSUMED" } },
+	};
+	dynamoClient.send(new UpdateItemCommand(updates)).catch((err) =>
+		console.warn("Failed to mark share as CONSUMED:", err),
+	);
+
+	if (fileKey) {
+		s3Client.send(new DeleteObjectCommand({
+			Bucket: BUCKET_NAME,
+			Key: fileKey,
+		})).catch((err) =>
+			console.warn("Failed to delete S3 object on limit hit:", err),
+		);
+	}
 }
 
 export const handler = async (event) => {
@@ -124,6 +146,18 @@ export const handler = async (event) => {
 			}
 		}
 
+		const maxDownloads = item.max_downloads?.N ? parseInt(item.max_downloads.N, 10) : null;
+		const currentDownloadCount = item.download_count?.N ? parseInt(item.download_count.N, 10) : 0;
+
+		// Pre-check: share already exhausted
+		if (maxDownloads !== null && currentDownloadCount >= maxDownloads) {
+			emitAudit(linkId, actor, "METADATA_LOAD", "EXPIRED");
+			return {
+				statusCode: 410,
+				body: JSON.stringify({ error: "Share has reached its download limit." }),
+			};
+		}
+
 		const responseBody = {
 			link_id: linkId,
 			share_name: item.share_name?.S || "Untitled Share",
@@ -131,9 +165,9 @@ export const handler = async (event) => {
 			visibility: visibility,
 		};
 
-		if (assetType === "TEXT") {
-			responseBody.payload_text = item.payload_text?.S || "";
-		} else if (assetType === "FILE") {
+		// For FILE type, generate pre-signed URL BEFORE incrementing the counter
+		// so the download that triggers the limit still succeeds
+		if (assetType === "FILE") {
 			const fileStatus = item.status?.S;
 			const fileKey = item.fileKey?.S;
 			const filename = item.filename?.S;
@@ -158,6 +192,48 @@ export const handler = async (event) => {
 			responseBody.downloadUrl = await getSignedUrl(s3Client, s3Command, {
 				expiresIn: 300,
 			});
+		}
+
+		// Atomically increment the download counter under the limit
+		try {
+			await dynamoClient.send(
+				new UpdateItemCommand({
+					TableName: TABLE_NAME,
+					Key: { link_id: { S: linkId } },
+					UpdateExpression: "ADD #count :inc",
+					ConditionExpression:
+						"attribute_not_exists(#max) OR #count < #max",
+					ExpressionAttributeNames: {
+						"#count": "download_count",
+						"#max": "max_downloads",
+					},
+					ExpressionAttributeValues: {
+						":inc": { N: "1" },
+					},
+				}),
+			);
+		} catch (updateError) {
+			if (updateError.name === "ConditionalCheckFailedException") {
+				emitAudit(linkId, actor, "DOWNLOAD_EXECUTION", "EXPIRED");
+				return {
+					statusCode: 410,
+					body: JSON.stringify({
+						error: "Share has reached its download limit.",
+					}),
+				};
+			}
+			throw updateError;
+		}
+
+		// If limit was just reached, mark as consumed and clean up S3 for FILE type
+		const newCount = currentDownloadCount + 1;
+		if (maxDownloads !== null && newCount >= maxDownloads) {
+			const fileKey = item.fileKey?.S;
+			markConsumed(linkId, fileKey);
+		}
+
+		if (assetType === "TEXT") {
+			responseBody.payload_text = item.payload_text?.S || "";
 		}
 
 		const action =

@@ -29,7 +29,7 @@ export function createDownloadRoute(args: DownloadArgs) {
                 Statement: [
                     {
                         Effect: "Allow",
-                        Action: ["dynamodb:GetItem"],
+                        Action: ["dynamodb:GetItem", "dynamodb:UpdateItem"],
                         Resource: [`arn:aws:dynamodb:*:*:table/${tableName}`],
                     },
                 ],
@@ -45,7 +45,7 @@ export function createDownloadRoute(args: DownloadArgs) {
                 Statement: [
                     {
                         Effect: "Allow",
-                        Action: ["s3:GetObject"],
+                        Action: ["s3:GetObject", "s3:DeleteObject"],
                         Resource: [`arn:aws:s3:::${bucketId}/*`],
                     },
                 ],
