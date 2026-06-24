@@ -1,8 +1,15 @@
 import AppSidebar from "#/components/app-sidebar";
 import { SidebarProvider, SidebarTrigger } from "#/components/ui/sidebar";
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { fetchAuthSession } from "aws-amplify/auth";
 
 export const Route = createFileRoute("/_protected")({
+	beforeLoad: async () => {
+		const session = await fetchAuthSession();
+		if (!session.tokens?.accessToken) {
+			throw redirect({ to: "/login" });
+		}
+	},
 	component: RouteComponent,
 });
 

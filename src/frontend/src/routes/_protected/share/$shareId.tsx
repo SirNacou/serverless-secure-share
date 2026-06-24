@@ -1,29 +1,43 @@
 import { Button } from "#/components/ui/button";
 import { api } from "#/lib/api";
+import type { ApiErrorResponse } from "#/types/api";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, Copy, Download, FileText, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 
-// 1. Data Contracts matching your updated DynamoDB payload shape
 interface ShareDownloadResponse {
 	link_id: string;
 	share_name: string;
 	asset_type: "FILE" | "TEXT";
-	payload_text?: string; // Present strictly when TEXT
-	filename?: string; // Present strictly when FILE
-	downloadUrl?: string; // Presigned S3 URL generated on-the-fly by backend
+	payload_text?: string;
+	filename?: string;
+	downloadUrl?: string;
 	visibility: "public" | "private";
 }
 
+const getShareQueryOptions = (shareId: string) =>
+	queryOptions({
+		queryKey: ["share", shareId],
+		queryFn: async () => {
+			const res = await api
+				.get(`api/share/${shareId}`)
+				.json<ShareDownloadResponse | ApiErrorResponse>();
+
+			if ("error" in res) {
+				throw new Error(res.error);
+			}
+
+			return res;
+		},
+		retry: 0,
+	});
+
 export const Route = createFileRoute("/_protected/share/$shareId")({
-	loader: async ({ params }) => {
+	loader: async ({ context: { queryClient }, params: { shareId } }) => {
 		try {
-			// Fetch configuration directly via your public API Gateway route path
-			return await api
-				.get(`api/share/${params.shareId}`)
-				.json<ShareDownloadResponse>();
-		} catch (error) {
-			console.error("Failed to resolve share metadata", error);
+			return await queryClient.ensureQueryData(getShareQueryOptions(shareId));
+		} catch {
 			return null;
 		}
 	},
@@ -31,11 +45,20 @@ export const Route = createFileRoute("/_protected/share/$shareId")({
 });
 
 function ShareViewComponent() {
-	const data = Route.useLoaderData();
+	const { shareId } = Route.useParams();
 	const [copied, setCopied] = useState(false);
 
-	// Error Boundaries Handler
-	if (!data) {
+	const { isPending, isError, data } = useQuery(getShareQueryOptions(shareId));
+
+	if (isPending) {
+		return (
+			<div className="min-h-[80vh] flex items-center justify-center">
+				<div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+			</div>
+		);
+	}
+
+	if (isError) {
 		return (
 			<div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center">
 				<ShieldAlert className="h-16 w-16 text-destructive stroke-[1.2] mb-4" />

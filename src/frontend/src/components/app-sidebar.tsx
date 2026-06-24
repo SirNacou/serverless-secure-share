@@ -1,5 +1,6 @@
-import { Link } from "@tanstack/react-router";
-import { CompassIcon, HistoryIcon, ShareIcon } from "lucide-react";
+import { useAuth } from "#/lib/auth-context";
+import { Link, useRouter } from "@tanstack/react-router";
+import { CompassIcon, HistoryIcon, LogOutIcon, ShareIcon } from "lucide-react";
 import { ModeToggle } from "./mode-toggle";
 import {
 	Sidebar,
@@ -13,7 +14,10 @@ import {
 
 type Props = {};
 
-const AppSidebar = (props: Props) => {
+const AppSidebar = (_props: Props) => {
+	const router = useRouter();
+	const { signOut } = useAuth();
+
 	return (
 		<Sidebar>
 			<SidebarHeader>
@@ -68,7 +72,20 @@ const AppSidebar = (props: Props) => {
 				</SidebarMenu>
 			</SidebarContent>
 			<SidebarFooter>
-				<ModeToggle />
+				<div className="flex items-center gap-1">
+					<ModeToggle />
+					<button
+						type="button"
+						onClick={async () => {
+							await signOut();
+							router.navigate({ to: "/login", replace: true });
+						}}
+						className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
+					>
+						<LogOutIcon className="size-3.5" />
+						Sign Out
+					</button>
+				</div>
 			</SidebarFooter>
 		</Sidebar>
 	);
