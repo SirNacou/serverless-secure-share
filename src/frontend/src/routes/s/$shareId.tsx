@@ -1,7 +1,7 @@
 import { Button } from "#/components/ui/button";
 import { api } from "#/lib/api";
-import type { ApiErrorResponse } from "#/types/api";
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import type { ApiErrorResponse, ShareConsumeResponse, ShareInfoResponse } from "#/types/api";
+import { useMutation, useQuery, queryOptions } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	Check,
@@ -9,20 +9,12 @@ import {
 	Download,
 	FileText,
 	Lock,
+	Loader,
 	ShieldAlert,
 	TimerOff,
 } from "lucide-react";
 import { useState } from "react";
-
-interface ShareDownloadResponse {
-	link_id: string;
-	share_name: string;
-	asset_type: "FILE" | "TEXT";
-	payload_text?: string;
-	filename?: string;
-	downloadUrl?: string;
-	visibility: "public" | "private";
-}
+import { toast } from "sonner";
 
 interface ErrorPageConfig {
 	title: string;
@@ -32,59 +24,31 @@ interface ErrorPageConfig {
 
 function getErrorConfig(errorMessage: string): ErrorPageConfig {
 	if (errorMessage.includes("not found or expired") || errorMessage.includes("does not exist") || errorMessage.includes("Missing link")) {
-		return {
-			title: "Share Not Found",
-			icon: ShieldAlert,
-			description: "This link doesn't exist or has been removed.",
-		};
+		return { title: "Share Not Found", icon: ShieldAlert, description: "This link doesn't exist or has been removed." };
 	}
 	if (errorMessage.includes("has expired")) {
-		return {
-			title: "Share Expired",
-			icon: TimerOff,
-			description: "The time window for this share has passed.",
-		};
+		return { title: "Share Expired", icon: TimerOff, description: "The time window for this share has passed." };
 	}
 	if (errorMessage.includes("download limit")) {
-		return {
-			title: "Download Limit Reached",
-			icon: ShieldAlert,
-			description: "This share has been downloaded the maximum allowed times.",
-		};
+		return { title: "Download Limit Reached", icon: ShieldAlert, description: "This share has been downloaded the maximum allowed times." };
 	}
 	if (errorMessage.includes("Access Denied") || errorMessage.includes("Unauthorized")) {
-		return {
-			title: "Access Denied",
-			icon: Lock,
-			description: "You don't have permission to view this private share.",
-		};
+		return { title: "Access Denied", icon: Lock, description: "You don't have permission to view this private share." };
 	}
 	if (errorMessage.includes("File state") || errorMessage.includes("unconfirmed")) {
-		return {
-			title: "File Not Ready",
-			icon: ShieldAlert,
-			description: "The file hasn't finished uploading yet. Please try again shortly.",
-		};
+		return { title: "File Not Ready", icon: ShieldAlert, description: "The file hasn't finished uploading yet. Please try again shortly." };
 	}
-	return {
-		title: "Resource Unavailable",
-		icon: ShieldAlert,
-		description: errorMessage || "Something went wrong loading this share.",
-	};
+	return { title: "Resource Unavailable", icon: ShieldAlert, description: errorMessage || "Something went wrong loading this share." };
 }
 
-const getShareQueryOptions = (shareId: string) =>
+const getShareInfoOptions = (shareId: string) =>
 	queryOptions({
-		queryKey: ["share", shareId],
+		queryKey: ["share-info", shareId],
 		queryFn: async () => {
 			const res = await api
 				.get(`api/share/${shareId}`)
-				.json<ShareDownloadResponse | ApiErrorResponse>();
-
-			if ("error" in res) {
-				throw new Error(res.error);
-			}
-
+				.json<ShareInfoResponse | ApiErrorResponse>();
+			if ("error" in res) throw new Error(res.error);
 			return res;
 		},
 		retry: 0,
@@ -93,7 +57,7 @@ const getShareQueryOptions = (shareId: string) =>
 export const Route = createFileRoute("/s/$shareId")({
 	loader: async ({ context: { queryClient }, params: { shareId } }) => {
 		try {
-			return await queryClient.ensureQueryData(getShareQueryOptions(shareId));
+			return await queryClient.ensureQueryData(getShareInfoOptions(shareId));
 		} catch {
 			return null;
 		}
@@ -103,16 +67,26 @@ export const Route = createFileRoute("/s/$shareId")({
 
 function ShareViewComponent() {
 	const { shareId } = Route.useParams();
-	const loaderData = Route.useLoaderData();
+
+	const { isPending, isError, error, data } = useQuery({
+		...getShareInfoOptions(shareId),
+		staleTime: Infinity,
+		refetchOnMount: false,
+	});
+
 	const [copied, setCopied] = useState(false);
 
-	const isFile = loaderData?.asset_type === "FILE";
-	const { isPending, isError, error, data } = useQuery({
-		...getShareQueryOptions(shareId),
-		staleTime: isFile ? 4 * 60 * 1000 : Infinity,
-		refetchOnMount: isFile,
-		refetchOnWindowFocus: isFile,
-		refetchOnReconnect: isFile,
+	const consumeMutation = useMutation({
+		mutationFn: async () => {
+			const res = await api
+				.post(`api/share/${shareId}/consume`)
+				.json<ShareConsumeResponse | ApiErrorResponse>();
+			if ("error" in res) throw new Error(res.error);
+			return res;
+		},
+		onError: (err) => {
+			toast.error(err instanceof Error ? err.message : "Failed to process share");
+		},
 	});
 
 	if (isPending) {
@@ -138,10 +112,31 @@ function ShareViewComponent() {
 	}
 
 	const handleCopyText = async () => {
-		if (!data.payload_text) return;
-		await navigator.clipboard.writeText(data.payload_text);
-		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
+		if (!data?.payload_text) return;
+
+		try {
+			const result = await consumeMutation.mutateAsync();
+			await navigator.clipboard.writeText(result.payload_text ?? data.payload_text);
+			setCopied(true);
+			toast.success("Copied to clipboard");
+			setTimeout(() => setCopied(false), 2000);
+		} catch {
+			// error toast handled by mutation
+		}
+	};
+
+	const handleDownload = async () => {
+		try {
+			const result = await consumeMutation.mutateAsync();
+			if (result.downloadUrl && result.filename) {
+				const a = document.createElement("a");
+				a.href = result.downloadUrl;
+				a.download = result.filename;
+				a.click();
+			}
+		} catch {
+			// error toast handled by mutation
+		}
 	};
 
 	return (
@@ -175,13 +170,16 @@ function ShareViewComponent() {
 										size="sm"
 										className="h-7 gap-1.5 px-2.5 text-xs"
 										onClick={handleCopyText}
+										disabled={consumeMutation.isPending}
 									>
-										{copied ? (
+										{consumeMutation.isPending ? (
+											<Loader className="h-3.5 w-3.5 animate-spin" />
+										) : copied ? (
 											<Check className="h-3.5 w-3.5 text-emerald-500" />
 										) : (
 											<Copy className="h-3.5 w-3.5" />
 										)}
-										{copied ? "Copied" : "Copy"}
+										{copied ? "Copied" : consumeMutation.isPending ? "Processing..." : "Copy"}
 									</Button>
 								</div>
 								<pre className="p-4 overflow-x-auto whitespace-pre-wrap max-h-[400px] leading-relaxed text-card-foreground select-text selection:bg-primary/20">
@@ -201,22 +199,22 @@ function ShareViewComponent() {
 									{data.filename || "shared-asset.bin"}
 								</p>
 								<p className="text-xs text-muted-foreground">
-									S3 secure binary allocation link ready.
+									Click download to retrieve the file.
 								</p>
 							</div>
 
-							{data.downloadUrl ? (
-								<Button asChild className="h-10 px-6 font-medium gap-2 mt-2">
-									<a href={data.downloadUrl} download={data.filename}>
-										<Download className="h-4 w-4" />
-										Download Resource
-									</a>
-								</Button>
-							) : (
-								<p className="text-xs text-destructive font-medium">
-									Access validation failed or down-stream link broken.
-								</p>
-							)}
+							<Button
+								className="h-10 px-6 font-medium gap-2 mt-2"
+								onClick={handleDownload}
+								disabled={consumeMutation.isPending}
+							>
+								{consumeMutation.isPending ? (
+									<Loader className="h-4 w-4 animate-spin" />
+								) : (
+									<Download className="h-4 w-4" />
+								)}
+								{consumeMutation.isPending ? "Preparing..." : "Download Resource"}
+							</Button>
 						</div>
 					)}
 				</div>

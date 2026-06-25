@@ -1,6 +1,7 @@
 import { createAuth } from "./infra/auth";
 import { createDownloadRoute } from "./infra/compute/api/download";
 import { createListRoute } from "./infra/compute/api/list";
+import { createShareInfoRoute } from "./infra/compute/api/share-info";
 import { createApiGateway } from "./infra/compute/api/gateway";
 import { createUploadRoute } from "./infra/compute/api/upload";
 import { createWorkerCompute } from "./infra/compute/workers";
@@ -40,6 +41,11 @@ createDownloadRoute({
 createListRoute({
 	httpApi: gatewaySystem.httpApi,
 	apiAuthorizer: gatewaySystem.apiAuthorizer,
+	tableName: database.metadataTable.name,
+});
+
+createShareInfoRoute({
+	httpApi: gatewaySystem.httpApi,
 	tableName: database.metadataTable.name,
 });
 

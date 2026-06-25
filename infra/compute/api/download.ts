@@ -93,12 +93,11 @@ export function createDownloadRoute(args: DownloadArgs) {
         payloadFormatVersion: "2.0",
     });
 
-    // Public Sharing route definition block
-    new aws.apigatewayv2.Route("get-share-route", {
+    // Public consume route — increments download counter and returns data
+    new aws.apigatewayv2.Route("consume-share-route", {
         apiId: args.httpApi.id,
-        routeKey: "GET /api/share/{shareId}",
+        routeKey: "POST /api/share/{shareId}/consume",
         target: pulumi.interpolate`integrations/${downloadIntegration.id}`,
-        // Dropping authorizationType config fields keeps this path completely public
     });
 
     new aws.lambda.Permission("api-gateway-download-invoke", {

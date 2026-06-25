@@ -6,20 +6,30 @@ import {
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
-	type SortingState,
 	useReactTable,
 } from "@tanstack/react-table";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "#/components/ui/table";
 import { BarChart3, RefreshCw, ShieldAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { columns } from "./-history/columns";
 import { DataTable } from "./-history/data-table";
+
+const SKELETON_HEADER = [1, 2, 3, 4, 5, 6, 7];
+const SKELETON_ROWS = [1, 2, 3, 4, 5];
+const SKELETON_CELLS = [1, 2, 3, 4, 5, 6, 7];
 
 export const Route = createFileRoute("/_protected/history")({
 	component: RouteComponent,
 });
 
 function RouteComponent() {
-	const [sorting, setSorting] = useState<SortingState>([]);
 	const [globalFilter, setGlobalFilter] = useState("");
 	const [typeFilter, setTypeFilter] = useState("all");
 	const [visibilityFilter, setVisibilityFilter] = useState("all");
@@ -44,8 +54,7 @@ function RouteComponent() {
 	const table = useReactTable({
 		data: filteredData,
 		columns,
-		state: { sorting, globalFilter },
-		onSortingChange: setSorting,
+		state: { globalFilter },
 		onGlobalFilterChange: setGlobalFilter,
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
@@ -59,24 +68,28 @@ function RouteComponent() {
 					<h1 className="text-2xl font-bold tracking-tight">History</h1>
 				</div>
 				<div className="rounded-xl border border-border overflow-hidden">
-					<div className="bg-muted/50 p-3 border-b border-border flex gap-4">
-						{[...Array(7)].map((_, i) => (
-							<div
-								key={i}
-								className="h-4 w-20 bg-muted-foreground/10 rounded animate-pulse"
-							/>
-						))}
-					</div>
-					{[...Array(5)].map((_, i) => (
-						<div key={i} className="p-3 border-b border-border flex gap-4">
-							{[...Array(7)].map((_, j) => (
-								<div
-									key={j}
-									className="h-4 w-20 bg-muted-foreground/5 rounded animate-pulse"
-								/>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								{SKELETON_HEADER.map((i) => (
+									<TableHead key={i}>
+										<div className="h-4 bg-muted-foreground/10 rounded animate-pulse" />
+									</TableHead>
+								))}
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{SKELETON_ROWS.map((i) => (
+								<TableRow key={i}>
+									{SKELETON_CELLS.map((j) => (
+										<TableCell key={j}>
+											<div className="h-4 bg-muted-foreground/5 rounded animate-pulse" />
+										</TableCell>
+									))}
+								</TableRow>
 							))}
-						</div>
-					))}
+						</TableBody>
+					</Table>
 				</div>
 			</div>
 		);

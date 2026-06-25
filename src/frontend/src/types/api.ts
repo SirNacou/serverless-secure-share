@@ -31,3 +31,25 @@ export interface ShareListResponse {
 	shares: ShareListItem[];
 	count: number;
 }
+
+export interface ShareInfoResponse {
+	link_id: string;
+	share_name: string;
+	asset_type: AssetType;
+	visibility: "public" | "private";
+	status?: string;
+	download_count?: number;
+	max_downloads?: number | null;
+	payload_text?: string;
+	filename?: string;
+}
+
+export interface ShareConsumeResponse {
+	link_id: string;
+	share_name: string;
+	asset_type: AssetType;
+	visibility: "public" | "private";
+	payload_text?: string;
+	filename?: string;
+	downloadUrl?: string;
+}

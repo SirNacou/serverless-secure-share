@@ -84,7 +84,7 @@ export function SortHeader({ column, label }: { column: any; label: string }) {
 	return (
 		<button
 			type="button"
-			onClick={() => column.toggleSorting(sorted === "asc")}
+			onClick={column.getToggleSortingHandler()}
 			className="inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer"
 		>
 			{label}
@@ -136,7 +136,6 @@ export function ActionsCell({ shareId }: { shareId: string }) {
 				params={{ shareId }}
 				target="_blank"
 				rel="noopener noreferrer"
-				preload={false}
 				className="inline-flex items-center justify-center size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
 				title="View share"
 			>
