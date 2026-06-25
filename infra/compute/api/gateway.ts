@@ -31,6 +31,17 @@ export function createApiGateway(args: GatewayArgs) {
 		apiId: httpApi.id,
 		name: "$default",
 		autoDeploy: true,
+		defaultRouteSettings: {
+			throttlingBurstLimit: 20,
+			throttlingRateLimit: 10,
+		},
+		routeSettings: [
+			{
+				routeKey: "POST /api/upload",
+				throttlingBurstLimit: 5,
+				throttlingRateLimit: 2,
+			},
+		],
 	});
 
 	return { httpApi, apiAuthorizer };
