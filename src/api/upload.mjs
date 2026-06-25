@@ -45,6 +45,13 @@ export const handler = async (event) => {
 				? { SS: targetUsers }
 				: { NULL: true };
 
+		// Build max_downloads attribute: omit entirely for "No Limit" so the
+		// download handler's attribute_not_exists condition passes correctly
+		const maxDownloadsAttr =
+			maxDownloads && parseInt(maxDownloads, 10) > 0
+				? { max_downloads: { N: maxDownloads } }
+				: {};
+
 		// 4. BRANCH LOGIC: TEXT VS FILE
 		if (payloadType === "text") {
 			// Direct write for text payloads—no S3 roundtrip needed
@@ -60,8 +67,9 @@ export const handler = async (event) => {
 						visibility: { S: visibility },
 						allowed_users: allowedUsersAttribute,
 						status: { S: "AVAILABLE" },
+						created_at: { N: Math.floor(Date.now() / 1000).toString() },
 						ttl: { N: ttlTimestamp.toString() },
-						max_downloads: maxDownloads && parseInt(maxDownloads, 10) > 0 ? { N: maxDownloads } : { NULL: true },
+						...maxDownloadsAttr,
 						download_count: { N: "0" },
 					},
 				}),
@@ -93,8 +101,9 @@ export const handler = async (event) => {
 						visibility: { S: visibility },
 						allowed_users: allowedUsersAttribute,
 						status: { S: "PENDING_UPLOAD" },
+						created_at: { N: Math.floor(Date.now() / 1000).toString() },
 						ttl: { N: ttlTimestamp.toString() },
-						max_downloads: maxDownloads && parseInt(maxDownloads, 10) > 0 ? { N: maxDownloads } : { NULL: true },
+						...maxDownloadsAttr,
 						download_count: { N: "0" },
 					},
 				}),

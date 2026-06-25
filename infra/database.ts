@@ -4,6 +4,7 @@ export function createDatabase() {
 	const metadataTable = new aws.dynamodb.Table("share-metadata", {
 		attributes: [
 			{ name: "link_id", type: "S" },
+			{ name: "owner_username", type: "S" },
 		],
 		hashKey: "link_id",
 		billingMode: "PAY_PER_REQUEST",
@@ -13,6 +14,13 @@ export function createDatabase() {
 		},
 		streamEnabled: true,
 		streamViewType: "OLD_IMAGE",
+		globalSecondaryIndexes: [
+			{
+				name: "by_owner",
+				keySchemas: [{ attributeName: "owner_username", keyType: "HASH" }],
+				projectionType: "ALL",
+			},
+		],
 	});
 
 	const auditTable = new aws.dynamodb.Table("audit-log", {

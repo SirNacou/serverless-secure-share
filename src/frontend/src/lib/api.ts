@@ -28,5 +28,28 @@ export const api = ky.create({
 				}
 			},
 		],
+		beforeError: [
+			async (state) => {
+				const raw = (state.error as unknown as Record<string, unknown>).data;
+				let errorMessage: string | undefined;
+
+				if (typeof raw === "string") {
+					try {
+						const parsed = JSON.parse(raw);
+						if (parsed?.error) errorMessage = parsed.error;
+					} catch {
+						// not JSON — ignore
+					}
+				} else if (raw && typeof raw === "object" && "error" in (raw as Record<string, unknown>)) {
+					const candidate = (raw as Record<string, unknown>).error;
+					if (typeof candidate === "string") errorMessage = candidate;
+				}
+
+				if (errorMessage) {
+					return new Error(errorMessage);
+				}
+				return state.error;
+			},
+		],
 	},
 });

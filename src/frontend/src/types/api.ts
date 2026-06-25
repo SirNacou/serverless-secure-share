@@ -11,3 +11,23 @@ export interface ShareUploadResponse {
 export interface ApiErrorResponse {
 	error: string;
 }
+
+export interface ShareListItem {
+	link_id: string;
+	share_name: string;
+	asset_type: AssetType;
+	visibility: "public" | "private";
+	status: string;
+	download_count: number;
+	max_downloads: number | null;
+	created_at?: number;
+	ttl: number;
+	filename?: string;
+	allowed_users?: string[];
+	owner_username?: string;
+}
+
+export interface ShareListResponse {
+	shares: ShareListItem[];
+	count: number;
+}

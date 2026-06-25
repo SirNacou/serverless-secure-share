@@ -3,7 +3,15 @@ import { api } from "#/lib/api";
 import type { ApiErrorResponse } from "#/types/api";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, Copy, Download, FileText, ShieldAlert } from "lucide-react";
+import {
+	Check,
+	Copy,
+	Download,
+	FileText,
+	Lock,
+	ShieldAlert,
+	TimerOff,
+} from "lucide-react";
 import { useState } from "react";
 
 interface ShareDownloadResponse {
@@ -14,6 +22,55 @@ interface ShareDownloadResponse {
 	filename?: string;
 	downloadUrl?: string;
 	visibility: "public" | "private";
+}
+
+interface ErrorPageConfig {
+	title: string;
+	icon: typeof ShieldAlert;
+	description: string;
+}
+
+function getErrorConfig(errorMessage: string): ErrorPageConfig {
+	if (errorMessage.includes("not found or expired") || errorMessage.includes("does not exist") || errorMessage.includes("Missing link")) {
+		return {
+			title: "Share Not Found",
+			icon: ShieldAlert,
+			description: "This link doesn't exist or has been removed.",
+		};
+	}
+	if (errorMessage.includes("has expired")) {
+		return {
+			title: "Share Expired",
+			icon: TimerOff,
+			description: "The time window for this share has passed.",
+		};
+	}
+	if (errorMessage.includes("download limit")) {
+		return {
+			title: "Download Limit Reached",
+			icon: ShieldAlert,
+			description: "This share has been downloaded the maximum allowed times.",
+		};
+	}
+	if (errorMessage.includes("Access Denied") || errorMessage.includes("Unauthorized")) {
+		return {
+			title: "Access Denied",
+			icon: Lock,
+			description: "You don't have permission to view this private share.",
+		};
+	}
+	if (errorMessage.includes("File state") || errorMessage.includes("unconfirmed")) {
+		return {
+			title: "File Not Ready",
+			icon: ShieldAlert,
+			description: "The file hasn't finished uploading yet. Please try again shortly.",
+		};
+	}
+	return {
+		title: "Resource Unavailable",
+		icon: ShieldAlert,
+		description: errorMessage || "Something went wrong loading this share.",
+	};
 }
 
 const getShareQueryOptions = (shareId: string) =>
@@ -50,7 +107,7 @@ function ShareViewComponent() {
 	const [copied, setCopied] = useState(false);
 
 	const isFile = loaderData?.asset_type === "FILE";
-	const { isPending, isError, data } = useQuery({
+	const { isPending, isError, error, data } = useQuery({
 		...getShareQueryOptions(shareId),
 		staleTime: isFile ? 4 * 60 * 1000 : Infinity,
 		refetchOnMount: isFile,
@@ -67,16 +124,15 @@ function ShareViewComponent() {
 	}
 
 	if (isError) {
+		const errMsg = error instanceof Error ? error.message : "Something went wrong";
+		const config = getErrorConfig(errMsg);
+		const Icon = config.icon;
+
 		return (
 			<div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center">
-				<ShieldAlert className="h-16 w-16 text-destructive stroke-[1.2] mb-4" />
-				<h1 className="text-xl font-bold tracking-tight">
-					Resource Unavailable
-				</h1>
-				<p className="text-sm text-muted-foreground max-w-sm mt-1">
-					This share link has expired, been revoked, or does not exist inside
-					our records.
-				</p>
+				<Icon className="h-16 w-16 text-destructive stroke-[1.2] mb-4" />
+				<h1 className="text-xl font-bold tracking-tight">{config.title}</h1>
+				<p className="text-sm text-muted-foreground max-w-sm mt-1">{config.description}</p>
 			</div>
 		);
 	}

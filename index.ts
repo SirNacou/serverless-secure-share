@@ -1,5 +1,6 @@
 import { createAuth } from "./infra/auth";
 import { createDownloadRoute } from "./infra/compute/api/download";
+import { createListRoute } from "./infra/compute/api/list";
 import { createApiGateway } from "./infra/compute/api/gateway";
 import { createUploadRoute } from "./infra/compute/api/upload";
 import { createWorkerCompute } from "./infra/compute/workers";
@@ -34,6 +35,12 @@ createDownloadRoute({
 	tableName: database.metadataTable.name,
 	auditQueueUrl: messaging.auditQueueUrl,
 	auditQueueArn: messaging.auditQueue.arn,
+});
+
+createListRoute({
+	httpApi: gatewaySystem.httpApi,
+	apiAuthorizer: gatewaySystem.apiAuthorizer,
+	tableName: database.metadataTable.name,
 });
 
 // 4. Asynchronous Background Core Loop

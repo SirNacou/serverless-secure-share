@@ -80,6 +80,7 @@ export const handler = async (event) => {
 		if (!linkId) {
 			return {
 				statusCode: 400,
+				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ error: "Missing link identifier." }),
 			};
 		}
@@ -101,6 +102,7 @@ export const handler = async (event) => {
 			emitAudit(linkId, actor, "METADATA_LOAD", "EXPIRED");
 			return {
 				statusCode: 404,
+				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ error: "Resource not found or expired." }),
 			};
 		}
@@ -116,6 +118,7 @@ export const handler = async (event) => {
 			emitAudit(linkId, actor, "METADATA_LOAD", "EXPIRED");
 			return {
 				statusCode: 404,
+				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ error: "Resource has expired." }),
 			};
 		}
@@ -125,6 +128,7 @@ export const handler = async (event) => {
 				emitAudit(linkId, actor, "METADATA_LOAD", "UNAUTHORIZED_403");
 				return {
 					statusCode: 403,
+					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						error: "Access Denied: Private asset authorization header missing.",
 					}),
@@ -138,6 +142,7 @@ export const handler = async (event) => {
 				emitAudit(linkId, actor, "METADATA_LOAD", "UNAUTHORIZED_403");
 				return {
 					statusCode: 403,
+					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						error:
 							"Access Denied: User identity not authorized to read this share.",
@@ -154,6 +159,7 @@ export const handler = async (event) => {
 			emitAudit(linkId, actor, "METADATA_LOAD", "EXPIRED");
 			return {
 				statusCode: 410,
+				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ error: "Share has reached its download limit." }),
 			};
 		}
@@ -176,6 +182,7 @@ export const handler = async (event) => {
 				emitAudit(linkId, actor, "DOWNLOAD_EXECUTION", "EXPIRED");
 				return {
 					statusCode: 400,
+					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						error: "File state sync unconfirmed by pipeline.",
 					}),
@@ -217,6 +224,7 @@ export const handler = async (event) => {
 				emitAudit(linkId, actor, "DOWNLOAD_EXECUTION", "EXPIRED");
 				return {
 					statusCode: 410,
+					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						error: "Share has reached its download limit.",
 					}),
@@ -252,6 +260,7 @@ export const handler = async (event) => {
 		console.error("Unified Delivery Pipeline Crash:", error);
 		return {
 			statusCode: 500,
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
 				error: "Internal operational exception encountered.",
 			}),
