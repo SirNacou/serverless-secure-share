@@ -144,7 +144,7 @@ function RouteComponent() {
 
 	return (
 		<div className="space-y-4">
-			<div className="flex items-center justify-between">
+			<div className="flex min-h-11 items-center justify-between">
 				<h1 className="text-2xl font-bold tracking-tight">My Shares</h1>
 				<div className="flex items-center gap-4">
 					<p className="text-sm text-muted-foreground">
