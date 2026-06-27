@@ -1,7 +1,7 @@
 import { api } from "#/lib/api";
-import type { ActivityResponse } from "#/types/api";
+import type { ShareListResponse } from "#/types/api";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	getCoreRowModel,
 	getFilteredRowModel,
@@ -25,7 +25,7 @@ const SKELETON_HEADER = [1, 2, 3, 4, 5, 6, 7];
 const SKELETON_ROWS = [1, 2, 3, 4, 5];
 const SKELETON_CELLS = [1, 2, 3, 4, 5, 6, 7];
 
-export const Route = createFileRoute("/_protected/history")({
+export const Route = createFileRoute("/_protected/active")({
 	component: RouteComponent,
 });
 
@@ -35,34 +35,26 @@ function RouteComponent() {
 	const [visibilityFilter, setVisibilityFilter] = useState("all");
 
 	const { data, isPending, isError, error, refetch } = useQuery({
-		queryKey: ["shares", "history"],
-		queryFn: () => api.get("api/activity").json<ActivityResponse>(),
+		queryKey: ["shares", "active"],
+		queryFn: () => api.get("api/shares").json<ShareListResponse>(),
 	});
 
 	const filteredData = useMemo(() => {
-		const mapped = (data?.shares ?? []).map((item) => {
-			const created_at = item.timestamp ? Math.floor(item.timestamp / 1000) : undefined;
-			return {
-				link_id: item.link_id,
-				share_name: item.share_name || "Untitled Share",
-				asset_type: item.asset_type || "TEXT",
-				visibility: item.visibility || "private",
-				status: item.status || "UNKNOWN",
-				download_count: 0,
-				max_downloads: null,
-				created_at,
-				ttl: 0,
-				owner_username: item.owner_username,
-			};
-		});
+		const now = Math.floor(Date.now() / 1000);
+		return (data?.shares ?? [])
+			.filter((item) => {
+				// Only active shares: status is AVAILABLE/PENDING_UPLOAD and not expired
+				const isActive =
+					(item.status === "AVAILABLE" || item.status === "PENDING_UPLOAD") &&
+					(item.ttl == null || item.ttl > now);
+				if (!isActive) return false;
 
-		return mapped.filter((item) => {
-			if (typeFilter !== "all" && item.asset_type !== typeFilter)
-				return false;
-			if (visibilityFilter !== "all" && item.visibility !== visibilityFilter)
-				return false;
-			return true;
-		});
+				if (typeFilter !== "all" && item.asset_type !== typeFilter)
+					return false;
+				if (visibilityFilter !== "all" && item.visibility !== visibilityFilter)
+					return false;
+				return true;
+			});
 	}, [data, typeFilter, visibilityFilter]);
 
 	const table = useReactTable({
@@ -79,7 +71,7 @@ function RouteComponent() {
 		return (
 			<div className="space-y-4">
 				<div className="flex items-center justify-between">
-					<h1 className="text-2xl font-bold tracking-tight">History</h1>
+					<h1 className="text-2xl font-bold tracking-tight">My Shares</h1>
 				</div>
 				<div className="rounded-xl border border-border overflow-hidden">
 					<Table>
@@ -114,7 +106,7 @@ function RouteComponent() {
 			<div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
 				<ShieldAlert className="size-16 text-destructive stroke-[1.2] mb-4" />
 				<h2 className="text-xl font-bold tracking-tight">
-					Failed to load history
+					Failed to load shares
 				</h2>
 				<p className="text-sm text-muted-foreground max-w-sm mt-1">
 					{error instanceof Error ? error.message : "Something went wrong"}
@@ -135,10 +127,17 @@ function RouteComponent() {
 		return (
 			<div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
 				<BarChart3 className="size-16 text-muted-foreground/40 stroke-[1.2] mb-4" />
-				<h2 className="text-xl font-bold tracking-tight">No historical activity yet</h2>
+				<h2 className="text-xl font-bold tracking-tight">No active shares</h2>
 				<p className="text-sm text-muted-foreground max-w-sm mt-1">
-					Your shared items and activity logs will appear here.
+					Create a new secure share to see it here.
 				</p>
+				<Link
+					to="/share"
+					className="inline-flex items-center gap-2 mt-4 h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/80 transition-colors"
+				>
+					<BarChart3 className="size-4" />
+					Create a Share
+				</Link>
 			</div>
 		);
 	}
@@ -146,10 +145,19 @@ function RouteComponent() {
 	return (
 		<div className="space-y-4">
 			<div className="flex items-center justify-between">
-				<h1 className="text-2xl font-bold tracking-tight">History</h1>
-				<p className="text-sm text-muted-foreground">
-					{filteredData.length} item{filteredData.length !== 1 ? "s" : ""}
-				</p>
+				<h1 className="text-2xl font-bold tracking-tight">My Shares</h1>
+				<div className="flex items-center gap-4">
+					<p className="text-sm text-muted-foreground">
+						{filteredData.length} active share{filteredData.length !== 1 ? "s" : ""}
+					</p>
+					<Link
+						to="/share"
+						className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/80 transition-colors"
+					>
+						<BarChart3 className="size-4" />
+						Create Share
+					</Link>
+				</div>
 			</div>
 
 			<DataTable

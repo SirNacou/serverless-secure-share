@@ -28,6 +28,7 @@ export function createDatabase() {
 			{ name: "log_id", type: "S" },
 			{ name: "link_id", type: "S" },
 			{ name: "timestamp", type: "N" },
+			{ name: "owner_username", type: "S" },
 		],
 		hashKey: "log_id",
 		billingMode: "PAY_PER_REQUEST",
@@ -40,6 +41,14 @@ export function createDatabase() {
 				name: "by_link_id",
 				keySchemas: [
 					{ attributeName: "link_id", keyType: "HASH" },
+					{ attributeName: "timestamp", keyType: "RANGE" },
+				],
+				projectionType: "ALL",
+			},
+			{
+				name: "by_owner",
+				keySchemas: [
+					{ attributeName: "owner_username", keyType: "HASH" },
 					{ attributeName: "timestamp", keyType: "RANGE" },
 				],
 				projectionType: "ALL",

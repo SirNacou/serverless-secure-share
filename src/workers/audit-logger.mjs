@@ -26,6 +26,10 @@ export const handler = async (event) => {
 						action: { S: body.action },
 						status: { S: body.status },
 						ttl: { N: String(ttl) },
+						share_name: body.share_name ? { S: body.share_name } : { NULL: true },
+						asset_type: body.asset_type ? { S: body.asset_type } : { NULL: true },
+						visibility: body.visibility ? { S: body.visibility } : { NULL: true },
+						owner_username: body.owner_username ? { S: body.owner_username } : { NULL: true },
 					},
 				}),
 			);

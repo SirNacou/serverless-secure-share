@@ -32,10 +32,10 @@ const AppSidebar = (_props: Props) => {
 									className:
 										"bg-sidebar-accent text-sidebar-accent-foreground font-medium",
 								}}
-								to="/share"
+								to="/active"
 							>
 								<ShareIcon />
-								<span>Share</span>
+								<span>My Shares</span>
 							</Link>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
@@ -78,7 +78,11 @@ const AppSidebar = (_props: Props) => {
 						type="button"
 						onClick={async () => {
 							await signOut();
-							router.navigate({ to: "/login", replace: true });
+							router.navigate({
+								to: "/login",
+								replace: true,
+								search: { redirectTo: undefined },
+							});
 						}}
 						className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
 					>

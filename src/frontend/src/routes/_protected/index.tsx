@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_protected/")({
-	beforeLoad: async (ctx) => {
+	beforeLoad: async () => {
 		throw redirect({
 			to: "/share",
 			replace: true,

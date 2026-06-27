@@ -53,3 +53,23 @@ export interface ShareConsumeResponse {
 	filename?: string;
 	downloadUrl?: string;
 }
+
+export interface ActivityShareItem {
+	log_id: string;
+	link_id: string;
+	actor: string;
+	timestamp: number;
+	action: string;
+	status: string;
+	share_name?: string;
+	asset_type?: AssetType;
+	visibility?: "public" | "private";
+	owner_username?: string;
+	created_at?: number;
+	ttl?: number;
+}
+
+export interface ActivityResponse {
+	shares: ActivityShareItem[];
+	count: number;
+}

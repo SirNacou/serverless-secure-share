@@ -4,6 +4,7 @@ import { createListRoute } from "./infra/compute/api/list";
 import { createShareInfoRoute } from "./infra/compute/api/share-info";
 import { createApiGateway } from "./infra/compute/api/gateway";
 import { createUploadRoute } from "./infra/compute/api/upload";
+import { createActivityRoute } from "./infra/compute/api/activity";
 import { createWorkerCompute } from "./infra/compute/workers";
 import { createAuditWorker } from "./infra/compute/audit";
 import { createDatabase } from "./infra/database";
@@ -28,6 +29,8 @@ createUploadRoute({
 	apiAuthorizer: gatewaySystem.apiAuthorizer,
 	bucketId: storage.bucket.id,
 	tableName: database.metadataTable.name,
+	auditQueueUrl: messaging.auditQueueUrl,
+	auditQueueArn: messaging.auditQueue.arn,
 });
 
 createDownloadRoute({
@@ -47,6 +50,12 @@ createListRoute({
 createShareInfoRoute({
 	httpApi: gatewaySystem.httpApi,
 	tableName: database.metadataTable.name,
+});
+
+createActivityRoute({
+	httpApi: gatewaySystem.httpApi,
+	apiAuthorizer: gatewaySystem.apiAuthorizer,
+	auditTableName: database.auditTable.name,
 });
 
 // 4. Asynchronous Background Core Loop

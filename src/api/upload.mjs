@@ -3,6 +3,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "node:crypto";
 import { basename } from "node:path";
+import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
 const s3Client = new S3Client({
 	region: process.env.AWS_REGION,
@@ -10,6 +11,30 @@ const s3Client = new S3Client({
 	responseChecksumValidation: "WHEN_REQUIRED",
 });
 const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION });
+const sqsClient = new SQSClient({ region: process.env.AWS_REGION });
+
+function emitAudit(linkId, ownerUsername, shareName, assetType, visibility, status) {
+	if (!process.env.AUDIT_QUEUE_URL) return;
+	sqsClient
+		.send(
+			new SendMessageCommand({
+				QueueUrl: process.env.AUDIT_QUEUE_URL,
+				MessageBody: JSON.stringify({
+					log_id: randomUUID(),
+					link_id: linkId,
+					share_name: shareName,
+					asset_type: assetType,
+					visibility: visibility,
+					owner_username: ownerUsername,
+					actor: ownerUsername,
+					timestamp: Date.now(),
+					action: "SHARE_CREATED",
+					status: status,
+				}),
+			}),
+		)
+		.catch((err) => console.warn("Audit emit failed (non-blocking):", err));
+}
 
 export const handler = async (event) => {
 	try {
@@ -55,27 +80,29 @@ export const handler = async (event) => {
 		// 4. BRANCH LOGIC: TEXT VS FILE
 		if (payloadType === "text") {
 			// Direct write for text payloads—no S3 roundtrip needed
-			await dynamoClient.send(
-				new PutItemCommand({
-					TableName: process.env.TABLE_NAME,
-					Item: {
-						link_id: { S: linkId },
-						share_name: { S: safeShareName }, // <-- SAVE TO DYNAMODB
-						owner_username: { S: ownerUsername },
-						asset_type: { S: "TEXT" },
-						payload_text: { S: textContent },
-						visibility: { S: visibility },
-						allowed_users: allowedUsersAttribute,
-						status: { S: "AVAILABLE" },
-						created_at: { N: Math.floor(Date.now() / 1000).toString() },
-						ttl: { N: ttlTimestamp.toString() },
-						...maxDownloadsAttr,
-						download_count: { N: "0" },
-					},
-				}),
-			);
+await dynamoClient.send(
+			new PutItemCommand({
+				TableName: process.env.TABLE_NAME,
+				Item: {
+					link_id: { S: linkId },
+					share_name: { S: safeShareName }, // <-- SAVE TO DYNAMODB
+					owner_username: { S: ownerUsername },
+					asset_type: { S: "TEXT" },
+					payload_text: { S: textContent },
+					visibility: { S: visibility },
+					allowed_users: allowedUsersAttribute,
+					status: { S: "AVAILABLE" },
+					created_at: { N: Math.floor(Date.now() / 1000).toString() },
+					ttl: { N: ttlTimestamp.toString() },
+					...maxDownloadsAttr,
+					download_count: { N: "0" },
+				},
+			}),
+		);
 
-			return {
+		emitAudit(linkId, ownerUsername, safeShareName, "TEXT", visibility, "AVAILABLE");
+
+		return {
 				statusCode: 200,
 				headers: {
 					"Content-Type": "application/json",
@@ -88,28 +115,30 @@ export const handler = async (event) => {
 			const safeFilename = basename(filename).replace(/[^a-zA-Z0-9.-]/g, "_");
 			const s3ObjectKey = `uploads/${linkId}-${safeFilename}`;
 
-			await dynamoClient.send(
-				new PutItemCommand({
-					TableName: process.env.TABLE_NAME,
-					Item: {
-						link_id: { S: linkId },
-						share_name: { S: safeShareName }, // <-- SAVE TO DYNAMODB
-						owner_username: { S: ownerUsername },
-						asset_type: { S: "FILE" },
-						fileKey: { S: s3ObjectKey },
-						filename: { S: safeFilename },
-						visibility: { S: visibility },
-						allowed_users: allowedUsersAttribute,
-						status: { S: "PENDING_UPLOAD" },
-						created_at: { N: Math.floor(Date.now() / 1000).toString() },
-						ttl: { N: ttlTimestamp.toString() },
-						...maxDownloadsAttr,
-						download_count: { N: "0" },
-					},
-				}),
-			);
+await dynamoClient.send(
+			new PutItemCommand({
+				TableName: process.env.TABLE_NAME,
+				Item: {
+					link_id: { S: linkId },
+					share_name: { S: safeShareName }, // <-- SAVE TO DYNAMODB
+					owner_username: { S: ownerUsername },
+					asset_type: { S: "FILE" },
+					fileKey: { S: s3ObjectKey },
+					filename: { S: safeFilename },
+					visibility: { S: visibility },
+					allowed_users: allowedUsersAttribute,
+					status: { S: "PENDING_UPLOAD" },
+					created_at: { N: Math.floor(Date.now() / 1000).toString() },
+					ttl: { N: ttlTimestamp.toString() },
+					...maxDownloadsAttr,
+					download_count: { N: "0" },
+				},
+			}),
+		);
 
-			const s3Command = new PutObjectCommand({
+		emitAudit(linkId, ownerUsername, safeShareName, "FILE", visibility, "PENDING_UPLOAD");
+
+		const s3Command = new PutObjectCommand({
 				Bucket: process.env.BUCKET_NAME,
 				Key: s3ObjectKey,
 				ContentType: contentType,

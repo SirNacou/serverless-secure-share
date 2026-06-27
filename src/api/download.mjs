@@ -32,7 +32,7 @@ function decodeCognitoToken(authHeader) {
 	}
 }
 
-function emitAudit(linkId, actor, action, status) {
+function emitAudit(linkId, actor, action, status, meta = {}) {
 	if (!AUDIT_QUEUE_URL) return;
 	sqsClient
 		.send(
@@ -45,6 +45,10 @@ function emitAudit(linkId, actor, action, status) {
 					timestamp: Date.now(),
 					action,
 					status,
+					share_name: meta.share_name,
+					asset_type: meta.asset_type,
+					visibility: meta.visibility,
+					owner_username: meta.owner_username,
 				}),
 			}),
 		)
@@ -99,7 +103,12 @@ export const handler = async (event) => {
 		);
 
 		if (!dbResult.Item) {
-			emitAudit(linkId, actor, "METADATA_LOAD", "EXPIRED");
+			emitAudit(linkId, actor, "METADATA_LOAD", "EXPIRED", {
+				share_name: "Unknown",
+				asset_type: "UNKNOWN",
+				visibility: "unknown",
+				owner_username: "unknown",
+			});
 			return {
 				statusCode: 404,
 				headers: { "Content-Type": "application/json" },
@@ -115,7 +124,12 @@ export const handler = async (event) => {
 		const ttl = item.ttl?.N ? parseInt(item.ttl.N, 10) : null;
 
 		if (ttl && Math.floor(Date.now() / 1000) > ttl) {
-			emitAudit(linkId, actor, "METADATA_LOAD", "EXPIRED");
+			emitAudit(linkId, actor, "METADATA_LOAD", "EXPIRED", {
+				share_name: item.share_name?.S || "Untitled Share",
+				asset_type: item.asset_type?.S || "UNKNOWN",
+				visibility: item.visibility?.S || "unknown",
+				owner_username: item.owner_username?.S || "unknown",
+			});
 			return {
 				statusCode: 404,
 				headers: { "Content-Type": "application/json" },
@@ -124,9 +138,14 @@ export const handler = async (event) => {
 		}
 
 		if (visibility === "private") {
-			if (!currentUsername) {
-				emitAudit(linkId, actor, "METADATA_LOAD", "UNAUTHORIZED_403");
-				return {
+if (!currentUsername) {
+			emitAudit(linkId, actor, "METADATA_LOAD", "UNAUTHORIZED_403", {
+				share_name: item.share_name?.S || "Untitled Share",
+				asset_type: item.asset_type?.S || "UNKNOWN",
+				visibility: item.visibility?.S || "unknown",
+				owner_username: item.owner_username?.S || "unknown",
+			});
+			return {
 					statusCode: 403,
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
@@ -138,9 +157,14 @@ export const handler = async (event) => {
 			const isOwner = ownerUsername === currentUsername;
 			const isAllowed = allowedUsers.includes(currentUsername);
 
-			if (!isOwner && !isAllowed) {
-				emitAudit(linkId, actor, "METADATA_LOAD", "UNAUTHORIZED_403");
-				return {
+if (!isOwner && !isAllowed) {
+			emitAudit(linkId, actor, "METADATA_LOAD", "UNAUTHORIZED_403", {
+				share_name: item.share_name?.S || "Untitled Share",
+				asset_type: item.asset_type?.S || "UNKNOWN",
+				visibility: item.visibility?.S || "unknown",
+				owner_username: item.owner_username?.S || "unknown",
+			});
+			return {
 					statusCode: 403,
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
@@ -156,7 +180,12 @@ export const handler = async (event) => {
 
 		// Pre-check: share already exhausted
 		if (maxDownloads !== null && currentDownloadCount >= maxDownloads) {
-			emitAudit(linkId, actor, "METADATA_LOAD", "EXPIRED");
+			emitAudit(linkId, actor, "METADATA_LOAD", "EXPIRED", {
+				share_name: item.share_name?.S || "Untitled Share",
+				asset_type: item.asset_type?.S || "UNKNOWN",
+				visibility: item.visibility?.S || "unknown",
+				owner_username: item.owner_username?.S || "unknown",
+			});
 			return {
 				statusCode: 410,
 				headers: { "Content-Type": "application/json" },
@@ -178,9 +207,14 @@ export const handler = async (event) => {
 			const fileKey = item.fileKey?.S;
 			const filename = item.filename?.S;
 
-			if (fileStatus !== "AVAILABLE" || !fileKey) {
-				emitAudit(linkId, actor, "DOWNLOAD_EXECUTION", "EXPIRED");
-				return {
+if (fileStatus !== "AVAILABLE" || !fileKey) {
+			emitAudit(linkId, actor, "DOWNLOAD_EXECUTION", "EXPIRED", {
+				share_name: item.share_name?.S || "Untitled Share",
+				asset_type: item.asset_type?.S || "UNKNOWN",
+				visibility: item.visibility?.S || "unknown",
+				owner_username: item.owner_username?.S || "unknown",
+			});
+			return {
 					statusCode: 400,
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
@@ -221,7 +255,12 @@ export const handler = async (event) => {
 			);
 		} catch (updateError) {
 			if (updateError.name === "ConditionalCheckFailedException") {
-				emitAudit(linkId, actor, "DOWNLOAD_EXECUTION", "EXPIRED");
+				emitAudit(linkId, actor, "DOWNLOAD_EXECUTION", "EXPIRED", {
+					share_name: item.share_name?.S || "Untitled Share",
+					asset_type: item.asset_type?.S || "UNKNOWN",
+					visibility: item.visibility?.S || "unknown",
+					owner_username: item.owner_username?.S || "unknown",
+				});
 				return {
 					statusCode: 410,
 					headers: { "Content-Type": "application/json" },
@@ -246,7 +285,12 @@ export const handler = async (event) => {
 
 		const action =
 			assetType === "FILE" ? "DOWNLOAD_EXECUTION" : "METADATA_LOAD";
-		emitAudit(linkId, actor, action, "SUCCESS");
+		emitAudit(linkId, actor, action, "SUCCESS", {
+			share_name: item.share_name?.S || "Untitled Share",
+			asset_type: item.asset_type?.S || "UNKNOWN",
+			visibility: item.visibility?.S || "unknown",
+			owner_username: item.owner_username?.S || "unknown",
+		});
 
 		return {
 			statusCode: 200,

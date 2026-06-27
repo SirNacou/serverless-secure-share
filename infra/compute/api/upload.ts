@@ -6,6 +6,8 @@ interface UploadArgs {
 	apiAuthorizer: aws.apigatewayv2.Authorizer;
 	bucketId: pulumi.Input<string>;
 	tableName: pulumi.Input<string>;
+	auditQueueUrl: pulumi.Input<string>;
+	auditQueueArn: pulumi.Input<string>;
 }
 
 export function createUploadRoute(args: UploadArgs) {
@@ -18,8 +20,8 @@ export function createUploadRoute(args: UploadArgs) {
 	new aws.iam.RolePolicy("upload-api-policy", {
 		role: lambdaRole.name,
 		policy: pulumi
-			.all([args.tableName, args.bucketId])
-			.apply(([tableName, bucketId]) =>
+			.all([args.tableName, args.bucketId, args.auditQueueArn])
+			.apply(([tableName, bucketId, auditQueueArn]) =>
 				JSON.stringify({
 					Version: "2012-10-17",
 					Statement: [
@@ -34,6 +36,12 @@ export function createUploadRoute(args: UploadArgs) {
 							Effect: "Allow",
 							Action: ["s3:PutObject"],
 							Resource: [`arn:aws:s3:::${bucketId}/uploads/*`],
+						},
+						{
+							Sid: "AuditSQSWriteAccess",
+							Effect: "Allow",
+							Action: ["sqs:SendMessage"],
+							Resource: [auditQueueArn],
 						},
 					],
 				}),
@@ -51,6 +59,7 @@ export function createUploadRoute(args: UploadArgs) {
 			variables: {
 				BUCKET_NAME: args.bucketId,
 				TABLE_NAME: args.tableName,
+				AUDIT_QUEUE_URL: args.auditQueueUrl,
 			},
 		},
 	});

@@ -75,6 +75,8 @@ function ShareViewComponent() {
 	});
 
 	const [copied, setCopied] = useState(false);
+	const [revealed, setRevealed] = useState(false);
+	const [revealedText, setRevealedText] = useState<string | null>(null);
 
 	const consumeMutation = useMutation({
 		mutationFn: async () => {
@@ -111,17 +113,27 @@ function ShareViewComponent() {
 		);
 	}
 
-	const handleCopyText = async () => {
-		if (!data?.payload_text) return;
-
+	const handleReveal = async () => {
 		try {
 			const result = await consumeMutation.mutateAsync();
-			await navigator.clipboard.writeText(result.payload_text ?? data.payload_text);
+			setRevealedText(result.payload_text ?? null);
+			setRevealed(true);
+		} catch {
+			// error toast handled by mutation
+		}
+	};
+
+	const handleCopyText = async () => {
+		const text = revealedText ?? data?.payload_text;
+		if (!text) return;
+
+		try {
+			await navigator.clipboard.writeText(text);
 			setCopied(true);
 			toast.success("Copied to clipboard");
 			setTimeout(() => setCopied(false), 2000);
 		} catch {
-			// error toast handled by mutation
+			toast.error("Failed to copy to clipboard");
 		}
 	};
 
@@ -160,8 +172,32 @@ function ShareViewComponent() {
 						</span>
 					</div>
 
-					{data.asset_type === "TEXT" && data.payload_text && (
-						<div className="space-y-3">
+				{data.asset_type === "TEXT" && data.payload_text && (
+					<div className="space-y-3">
+						{!revealed ? (
+							<div className="flex flex-col items-center justify-center border border-dashed border-border rounded-xl p-8 bg-muted/10 space-y-4">
+								<div className="h-14 w-14 rounded-full bg-primary/5 border border-primary/10 flex items-center justify-center">
+									<Lock className="h-7 w-7 text-primary stroke-[1.5]" />
+								</div>
+								<div className="text-center space-y-1">
+									<p className="text-sm font-semibold">Content Locked</p>
+									<p className="text-xs text-muted-foreground">
+										Click to reveal and count as a download.
+									</p>
+								</div>
+								<Button
+									className="h-10 px-6 font-medium gap-2 mt-2"
+									onClick={handleReveal}
+									disabled={consumeMutation.isPending}
+								>
+									{consumeMutation.isPending ? (
+										<Loader className="h-4 w-4 animate-spin" />
+									) : (
+										<>Reveal Content</>
+									)}
+								</Button>
+							</div>
+						) : (
 							<div className="relative rounded-xl border border-border bg-muted/30 overflow-hidden font-mono text-sm">
 								<div className="flex justify-between items-center px-4 py-2 bg-muted/80 border-b border-border text-xs text-muted-foreground">
 									<span>Payload Content Snippet</span>
@@ -172,22 +208,21 @@ function ShareViewComponent() {
 										onClick={handleCopyText}
 										disabled={consumeMutation.isPending}
 									>
-										{consumeMutation.isPending ? (
-											<Loader className="h-3.5 w-3.5 animate-spin" />
-										) : copied ? (
+										{copied ? (
 											<Check className="h-3.5 w-3.5 text-emerald-500" />
 										) : (
 											<Copy className="h-3.5 w-3.5" />
 										)}
-										{copied ? "Copied" : consumeMutation.isPending ? "Processing..." : "Copy"}
+										{copied ? "Copied" : "Copy"}
 									</Button>
 								</div>
 								<pre className="p-4 overflow-x-auto whitespace-pre-wrap max-h-[400px] leading-relaxed text-card-foreground select-text selection:bg-primary/20">
-									{data.payload_text}
+									{revealedText ?? data.payload_text}
 								</pre>
 							</div>
-						</div>
-					)}
+						)}
+					</div>
+				)}
 
 					{data.asset_type === "FILE" && (
 						<div className="flex flex-col items-center justify-center border border-dashed border-border rounded-xl p-8 bg-muted/10 space-y-4">
