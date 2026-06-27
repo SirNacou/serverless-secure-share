@@ -11,12 +11,14 @@ const s3Client = new S3Client({
 	responseChecksumValidation: "WHEN_REQUIRED",
 });
 const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-const sqsClient = new SQSClient({ region: process.env.AWS_REGION });
+const sqsClient = new SQSClient({ region: "ap-southeast-1" });
 
-function emitAudit(linkId, ownerUsername, shareName, assetType, visibility, status) {
-	if (!process.env.AUDIT_QUEUE_URL) return;
-	sqsClient
-		.send(
+async function emitAudit(linkId, ownerUsername, shareName, assetType, visibility, status) {
+	if (!process.env.AUDIT_QUEUE_URL) {
+		return;
+	}
+	try {
+		await sqsClient.send(
 			new SendMessageCommand({
 				QueueUrl: process.env.AUDIT_QUEUE_URL,
 				MessageBody: JSON.stringify({
@@ -32,8 +34,10 @@ function emitAudit(linkId, ownerUsername, shareName, assetType, visibility, stat
 					status: status,
 				}),
 			}),
-		)
-		.catch((err) => console.warn("Audit emit failed (non-blocking):", err));
+		);
+	} catch (err) {
+		console.error("SQS SendMessage failed:", err);
+	}
 }
 
 export const handler = async (event) => {
@@ -100,7 +104,7 @@ await dynamoClient.send(
 			}),
 		);
 
-		emitAudit(linkId, ownerUsername, safeShareName, "TEXT", visibility, "AVAILABLE");
+		await emitAudit(linkId, ownerUsername, safeShareName, "TEXT", visibility, "AVAILABLE");
 
 		return {
 				statusCode: 200,

@@ -33,7 +33,10 @@ function decodeCognitoToken(authHeader) {
 }
 
 function emitAudit(linkId, actor, action, status, meta = {}) {
-	if (!AUDIT_QUEUE_URL) return;
+	if (!AUDIT_QUEUE_URL) {
+		console.warn("emitAudit skipped: AUDIT_QUEUE_URL not set");
+		return;
+	}
 	sqsClient
 		.send(
 			new SendMessageCommand({
@@ -52,7 +55,7 @@ function emitAudit(linkId, actor, action, status, meta = {}) {
 				}),
 			}),
 		)
-		.catch((err) => console.warn("Audit emit failed (non-blocking):", err));
+		.catch((err) => console.error("SQS SendMessage failed:", err));
 }
 
 function markConsumed(linkId, fileKey) {

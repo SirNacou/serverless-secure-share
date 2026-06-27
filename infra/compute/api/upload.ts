@@ -21,31 +21,36 @@ export function createUploadRoute(args: UploadArgs) {
 		role: lambdaRole.name,
 		policy: pulumi
 			.all([args.tableName, args.bucketId, args.auditQueueArn])
-			.apply(([tableName, bucketId, auditQueueArn]) =>
-				JSON.stringify({
-					Version: "2012-10-17",
-					Statement: [
-						{
-							Sid: "DynamoDBWriteAccess",
-							Effect: "Allow",
-							Action: ["dynamodb:PutItem"],
-							Resource: [`arn:aws:dynamodb:*:*:table/${tableName}`],
-						},
-						{
-							Sid: "S3RestrictedWriteAccess",
-							Effect: "Allow",
-							Action: ["s3:PutObject"],
-							Resource: [`arn:aws:s3:::${bucketId}/uploads/*`],
-						},
-						{
-							Sid: "AuditSQSWriteAccess",
-							Effect: "Allow",
-							Action: ["sqs:SendMessage"],
-							Resource: [auditQueueArn],
-						},
-					],
-				}),
-			),
+				.apply(([tableName, bucketId, auditQueueArn]) =>
+					JSON.stringify({
+						Version: "2012-10-17",
+						Statement: [
+							{
+								Sid: "DynamoDBWriteAccess",
+								Effect: "Allow",
+								Action: ["dynamodb:PutItem"],
+								Resource: [`arn:aws:dynamodb:*:*:table/${tableName}`],
+							},
+							{
+								Sid: "S3RestrictedWriteAccess",
+								Effect: "Allow",
+								Action: ["s3:PutObject"],
+								Resource: [`arn:aws:s3:::${bucketId}/uploads/*`],
+							},
+							{
+								Sid: "AuditSQSWriteAccess",
+								Effect: "Allow",
+								Action: ["sqs:SendMessage"],
+								Resource: [auditQueueArn],
+							},
+						],
+					}),
+				),
+	});
+
+	new aws.iam.RolePolicyAttachment("upload-lambda-logs", {
+		role: lambdaRole.name,
+		policyArn: "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
 	});
 
 	const generateUrlLambda = new aws.lambda.Function("generateUrlFunction", {
