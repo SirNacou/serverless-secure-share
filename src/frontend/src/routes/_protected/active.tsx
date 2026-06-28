@@ -18,7 +18,7 @@ import {
 } from "#/components/ui/table";
 import { BarChart3, RefreshCw, ShieldAlert } from "lucide-react";
 import { useMemo, useState } from "react";
-import { columns } from "./-history/columns";
+import { activeColumns } from "./-history/columns";
 import { DataTable } from "./-history/data-table";
 
 const SKELETON_HEADER = [1, 2, 3, 4, 5, 6, 7];
@@ -57,15 +57,15 @@ function RouteComponent() {
 			});
 	}, [data, typeFilter, visibilityFilter]);
 
-	const table = useReactTable({
-		data: filteredData,
-		columns,
-		state: { globalFilter },
-		onGlobalFilterChange: setGlobalFilter,
-		getCoreRowModel: getCoreRowModel(),
-		getSortedRowModel: getSortedRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-	});
+		const table = useReactTable({
+			data: filteredData,
+			columns: activeColumns,
+			state: { globalFilter },
+			onGlobalFilterChange: setGlobalFilter,
+			getCoreRowModel: getCoreRowModel(),
+			getSortedRowModel: getSortedRowModel(),
+			getFilteredRowModel: getFilteredRowModel(),
+		});
 
 	if (isPending) {
 		return (
@@ -160,16 +160,16 @@ function RouteComponent() {
 				</div>
 			</div>
 
-			<DataTable
-				table={table}
-				columnCount={columns.length}
-				globalFilter={globalFilter}
-				onGlobalFilterChange={setGlobalFilter}
-				typeFilter={typeFilter}
-				onTypeFilterChange={setTypeFilter}
-				visibilityFilter={visibilityFilter}
-				onVisibilityFilterChange={setVisibilityFilter}
-			/>
+					<DataTable
+						table={table}
+						columnCount={activeColumns.length}
+						globalFilter={globalFilter}
+						onGlobalFilterChange={setGlobalFilter}
+						typeFilter={typeFilter}
+						onTypeFilterChange={setTypeFilter}
+						visibilityFilter={visibilityFilter}
+						onVisibilityFilterChange={setVisibilityFilter}
+					/>
 		</div>
 	);
 }

@@ -29,6 +29,8 @@ export const handler = async (event) => {
 			if (body.asset_type) item.asset_type = { S: body.asset_type };
 			if (body.visibility) item.visibility = { S: body.visibility };
 			if (body.owner_username) item.owner_username = { S: body.owner_username };
+			if (body.created_at != null) item.created_at = { N: String(body.created_at) };
+			if (body.share_ttl != null) item.share_ttl = { N: String(body.share_ttl) };
 
 			await dynamoClient.send(
 			new PutItemCommand({

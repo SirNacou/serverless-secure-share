@@ -16,25 +16,9 @@ function unmarshallItem(item) {
 	return entry;
 }
 
-function decodeCognitoToken(authHeader) {
-	if (!authHeader) return null;
-	try {
-		const token = authHeader.replace("Bearer ", "");
-		const base64Url = token.split(".")[1];
-		const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-		const jsonPayload = Buffer.from(base64, "base64").toString("utf8");
-		return JSON.parse(jsonPayload);
-	} catch (e) {
-		console.warn("JWT parsing exception caught:", e);
-		return null;
-	}
-}
-
 export const handler = async (event) => {
 	try {
-		const authHeader = event.headers?.authorization || event.headers?.Authorization;
-		const decodedToken = decodeCognitoToken(authHeader);
-		const ownerUsername = decodedToken?.username;
+		const ownerUsername = event.requestContext?.authorizer?.jwt?.claims?.username;
 
 		if (!ownerUsername) {
 			return {
@@ -59,14 +43,36 @@ export const handler = async (event) => {
 		const events = (result.Items || []).map(unmarshallItem);
 
 		const latestByLink = new Map();
-		for (const event of events) {
-			const existing = latestByLink.get(event.link_id);
-			if (!existing || event.timestamp > existing.timestamp) {
-				latestByLink.set(event.link_id, event);
+		const createdEventsByLink = new Map();
+		for (const auditEvent of events) {
+			const existing = latestByLink.get(auditEvent.link_id);
+			if (!existing || auditEvent.timestamp > existing.timestamp) {
+				latestByLink.set(auditEvent.link_id, auditEvent);
+			}
+			if (auditEvent.action === "SHARE_CREATED") {
+				const existingCreated = createdEventsByLink.get(auditEvent.link_id);
+				if (!existingCreated || auditEvent.timestamp < existingCreated.timestamp) {
+					createdEventsByLink.set(auditEvent.link_id, auditEvent);
+				}
 			}
 		}
 
-		const shares = Array.from(latestByLink.values());
+		const shares = Array.from(latestByLink.values()).map((item) => {
+			const createdEvent = createdEventsByLink.get(item.link_id);
+			const result = {
+				...item,
+				created_at: createdEvent?.created_at || (createdEvent ? Math.floor(createdEvent.timestamp / 1000) : null),
+				share_ttl: createdEvent?.share_ttl || null,
+			};
+			console.log("[activity] enriched share:", JSON.stringify({
+				link_id: result.link_id,
+				has_created_at: result.created_at != null,
+				has_share_ttl: result.share_ttl != null,
+				created_event_exists: createdEvent != null,
+				created_event_raw: createdEvent ? { timestamp: createdEvent.timestamp, has_share_ttl: createdEvent.share_ttl != null, has_created_at: createdEvent.created_at != null } : null,
+			}));
+			return result;
+		});
 
 		return {
 			statusCode: 200,

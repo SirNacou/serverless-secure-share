@@ -18,7 +18,7 @@ import {
 } from "#/components/ui/table";
 import { BarChart3, RefreshCw, ShieldAlert } from "lucide-react";
 import { useMemo, useState } from "react";
-import { columns } from "./-history/columns";
+import { historyColumns } from "./-history/columns";
 import { DataTable } from "./-history/data-table";
 
 const SKELETON_HEADER = [1, 2, 3, 4, 5, 6, 7];
@@ -41,17 +41,17 @@ function RouteComponent() {
 
 	const filteredData = useMemo(() => {
 		const mapped = (data?.shares ?? []).map((item) => {
-			const created_at = item.timestamp ? Math.floor(item.timestamp / 1000) : undefined;
 			return {
 				link_id: item.link_id,
 				share_name: item.share_name || "Untitled Share",
 				asset_type: item.asset_type || "TEXT",
 				visibility: item.visibility || "private",
 				status: item.status || "UNKNOWN",
+				action: item.action || "UNKNOWN",
 				download_count: 0,
 				max_downloads: null,
-				created_at,
-				ttl: 0,
+				created_at: item.created_at,
+				share_ttl: item.share_ttl,
 				owner_username: item.owner_username,
 			};
 		});
@@ -65,15 +65,15 @@ function RouteComponent() {
 		});
 	}, [data, typeFilter, visibilityFilter]);
 
-	const table = useReactTable({
-		data: filteredData,
-		columns,
-		state: { globalFilter },
-		onGlobalFilterChange: setGlobalFilter,
-		getCoreRowModel: getCoreRowModel(),
-		getSortedRowModel: getSortedRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-	});
+		const table = useReactTable({
+			data: filteredData,
+			columns: historyColumns,
+			state: { globalFilter },
+			onGlobalFilterChange: setGlobalFilter,
+			getCoreRowModel: getCoreRowModel(),
+			getSortedRowModel: getSortedRowModel(),
+			getFilteredRowModel: getFilteredRowModel(),
+		});
 
 	if (isPending) {
 		return (
@@ -152,16 +152,16 @@ function RouteComponent() {
 				</p>
 			</div>
 
-			<DataTable
-				table={table}
-				columnCount={columns.length}
-				globalFilter={globalFilter}
-				onGlobalFilterChange={setGlobalFilter}
-				typeFilter={typeFilter}
-				onTypeFilterChange={setTypeFilter}
-				visibilityFilter={visibilityFilter}
-				onVisibilityFilterChange={setVisibilityFilter}
-			/>
+					<DataTable
+						table={table}
+						columnCount={historyColumns.length}
+						globalFilter={globalFilter}
+						onGlobalFilterChange={setGlobalFilter}
+						typeFilter={typeFilter}
+						onTypeFilterChange={setTypeFilter}
+						visibilityFilter={visibilityFilter}
+						onVisibilityFilterChange={setVisibilityFilter}
+					/>
 		</div>
 	);
 }

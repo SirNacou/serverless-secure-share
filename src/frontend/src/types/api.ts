@@ -22,6 +22,8 @@ export interface ShareListItem {
 	max_downloads: number | null;
 	created_at?: number;
 	ttl: number;
+	share_ttl?: number;
+	action?: string;
 	filename?: string;
 	allowed_users?: string[];
 	owner_username?: string;
@@ -66,6 +68,7 @@ export interface ActivityShareItem {
 	visibility?: "public" | "private";
 	owner_username?: string;
 	created_at?: number;
+	share_ttl?: number;
 	ttl?: number;
 }
 

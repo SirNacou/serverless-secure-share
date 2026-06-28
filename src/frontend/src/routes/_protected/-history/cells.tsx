@@ -30,6 +30,31 @@ export function formatRelativeTime(ttl: number): string {
 	return "<1m";
 }
 
+export function formatAbsoluteExpiry(ttl: number): string {
+	if (ttl == null || ttl === 0) return "—";
+	
+	const date = new Date(ttl * 1000);
+	const now = Math.floor(Date.now() / 1000);
+	
+	if (ttl <= now) {
+		return `Expired ${date.toLocaleString(undefined, {
+			month: "short",
+			day: "numeric",
+			year: "numeric",
+			hour: "2-digit",
+			minute: "2-digit",
+		})}`;
+	}
+	
+	return date.toLocaleString(undefined, {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+}
+
 export function formatDate(epoch: number): string {
 	return new Date(epoch * 1000).toLocaleDateString(undefined, {
 		month: "short",
@@ -43,6 +68,7 @@ export function StatusBadge({ status }: { status: string }) {
 		AVAILABLE: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/25",
 		PENDING_UPLOAD: "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25",
 		CONSUMED: "bg-muted text-muted-foreground border-border",
+		EXPIRED: "bg-rose-500/10 text-rose-600 border-rose-500/20 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/25",
 	};
 	const label = status === "PENDING_UPLOAD" ? "Pending" : status.charAt(0) + status.slice(1).toLowerCase();
 

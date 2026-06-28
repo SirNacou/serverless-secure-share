@@ -13,26 +13,30 @@ const s3Client = new S3Client({
 const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 const sqsClient = new SQSClient({ region: "ap-southeast-1" });
 
-async function emitAudit(linkId, ownerUsername, shareName, assetType, visibility, status) {
+async function emitAudit(linkId, ownerUsername, shareName, assetType, visibility, status, createdAt, ttl) {
 	if (!process.env.AUDIT_QUEUE_URL) {
 		return;
 	}
 	try {
+		const auditMessage = {
+			log_id: randomUUID(),
+			link_id: linkId,
+			share_name: shareName,
+			asset_type: assetType,
+			visibility: visibility,
+			owner_username: ownerUsername,
+			actor: ownerUsername,
+			timestamp: Date.now(),
+			action: "SHARE_CREATED",
+			status: status,
+		};
+		if (createdAt != null) auditMessage.created_at = createdAt;
+		if (ttl != null) auditMessage.share_ttl = ttl;
+		
 		await sqsClient.send(
 			new SendMessageCommand({
 				QueueUrl: process.env.AUDIT_QUEUE_URL,
-				MessageBody: JSON.stringify({
-					log_id: randomUUID(),
-					link_id: linkId,
-					share_name: shareName,
-					asset_type: assetType,
-					visibility: visibility,
-					owner_username: ownerUsername,
-					actor: ownerUsername,
-					timestamp: Date.now(),
-					action: "SHARE_CREATED",
-					status: status,
-				}),
+				MessageBody: JSON.stringify(auditMessage),
 			}),
 		);
 	} catch (err) {
@@ -101,10 +105,10 @@ await dynamoClient.send(
 					...maxDownloadsAttr,
 					download_count: { N: "0" },
 				},
-			}),
-		);
+			}));
 
-		await emitAudit(linkId, ownerUsername, safeShareName, "TEXT", visibility, "AVAILABLE");
+		const createdAt = Math.floor(Date.now() / 1000);
+		await emitAudit(linkId, ownerUsername, safeShareName, "TEXT", visibility, "AVAILABLE", createdAt, ttlTimestamp);
 
 		return {
 				statusCode: 200,
@@ -137,10 +141,10 @@ await dynamoClient.send(
 					...maxDownloadsAttr,
 					download_count: { N: "0" },
 				},
-			}),
-		);
+			}));
 
-		emitAudit(linkId, ownerUsername, safeShareName, "FILE", visibility, "PENDING_UPLOAD");
+			const createdAt = Math.floor(Date.now() / 1000);
+			emitAudit(linkId, ownerUsername, safeShareName, "FILE", visibility, "PENDING_UPLOAD", createdAt, ttlTimestamp);
 
 		const s3Command = new PutObjectCommand({
 				Bucket: process.env.BUCKET_NAME,

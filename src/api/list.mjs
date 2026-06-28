@@ -41,7 +41,18 @@ export const handler = async (event) => {
 			}),
 		);
 
-		const shares = (result.Items || []).map(unmarshallItem);
+		const shares = (result.Items || []).map(unmarshallItem).map((item) => {
+			const now = Math.floor(Date.now() / 1000);
+			if (item.ttl != null && item.ttl <= now) {
+				item.status = "EXPIRED";
+			} else if (
+				item.max_downloads != null &&
+				item.download_count >= item.max_downloads
+			) {
+				item.status = "CONSUMED";
+			}
+			return item;
+		});
 
 		return {
 			statusCode: 200,
