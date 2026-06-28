@@ -8,6 +8,7 @@ import { createActivityRoute } from "./infra/compute/api/activity";
 import { createWorkerCompute } from "./infra/compute/workers";
 import { createAuditWorker } from "./infra/compute/audit";
 import { createDatabase } from "./infra/database";
+import { createFrontendHosting } from "./infra/frontend";
 import { createMessaging } from "./infra/messaging";
 import { createStorage } from "./infra/storage";
 
@@ -21,6 +22,11 @@ const messaging = createMessaging();
 const gatewaySystem = createApiGateway({
 	userPoolId: auth.userPool.id,
 	userPoolClientId: auth.userPoolClient.id,
+});
+
+// 2.5. Frontend Hosting (S3 + CloudFront)
+const frontendSystem = createFrontendHosting({
+	apiEndpoint: gatewaySystem.httpApi.apiEndpoint,
 });
 
 // 3. Mount Isolated Handlers onto Gateway Instance
@@ -75,3 +81,4 @@ createAuditWorker({
 export const cognitoPoolId = auth.userPool.id;
 export const cognitoClientId = auth.userPoolClient.id;
 export const publicApiEndpoint = gatewaySystem.httpApi.apiEndpoint;
+export const frontendDomain = frontendSystem.distributionDomain;

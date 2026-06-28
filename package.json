@@ -11,6 +11,7 @@
         "@aws-sdk/s3-request-presigner": "^3.1064.0",
         "@pulumi/aws": "^7.0.0",
         "@pulumi/awsx": "^3.0.0",
+        "@pulumi/cloudflare": "^6.17.0",
         "@pulumi/pulumi": "^3.113.0",
         "@types/aws-lambda": "^8.10.162"
     }

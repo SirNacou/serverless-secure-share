@@ -55,13 +55,6 @@ const getShareInfoOptions = (shareId: string) =>
 	});
 
 export const Route = createFileRoute("/s/$shareId")({
-	loader: async ({ context: { queryClient }, params: { shareId } }) => {
-		try {
-			return await queryClient.ensureQueryData(getShareInfoOptions(shareId));
-		} catch {
-			return null;
-		}
-	},
 	component: ShareViewComponent,
 });
 
@@ -70,8 +63,6 @@ function ShareViewComponent() {
 
 	const { isPending, isError, error, data } = useQuery({
 		...getShareInfoOptions(shareId),
-		staleTime: Infinity,
-		refetchOnMount: false,
 	});
 
 	const [copied, setCopied] = useState(false);

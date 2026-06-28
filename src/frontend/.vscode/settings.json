@@ -31,7 +31,5 @@
   },
   "editor.codeActionsOnSave": {
     "source.organizeImports.biome": "explicit"
-  },
-  "biome.enabled": true,
-  "editor.formatOnSave": true
+  }
 }

@@ -1,5 +1,5 @@
 {
-  "projectName": "frontend",
+  "projectName": "frontend2",
   "mode": "file-router",
   "typescript": true,
   "packageManager": "bun",
@@ -9,18 +9,10 @@
   "envVarValues": {},
   "git": false,
   "install": true,
-  "routerOnly": false,
+  "routerOnly": true,
   "version": 1,
   "framework": "react",
   "chosenAddOns": [
-    "biome",
-    "nitro",
-    "compiler",
-    "db",
-    "form",
-    "shadcn",
-    "t3env",
-    "table",
-    "tanstack-query"
+    "biome"
   ]
 }

@@ -1,9 +1,8 @@
-import { env } from "#/env";
 import { fetchAuthSession } from "aws-amplify/auth";
 import ky from "ky";
 
 // Establish your backend API Gateway domain target
-const API_BASE_URL = env.VITE_API_ENDPOINT;
+const API_BASE_URL = import.meta.env.VITE_API_ENDPOINT;
 
 export const api = ky.create({
 	baseUrl: API_BASE_URL,

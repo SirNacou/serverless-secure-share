@@ -56,10 +56,12 @@ export function formatAbsoluteExpiry(ttl: number): string {
 }
 
 export function formatDate(epoch: number): string {
-	return new Date(epoch * 1000).toLocaleDateString(undefined, {
+	return new Date(epoch * 1000).toLocaleString(undefined, {
 		month: "short",
 		day: "numeric",
 		year: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
 	});
 }
 

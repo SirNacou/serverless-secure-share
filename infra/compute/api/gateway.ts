@@ -7,15 +7,15 @@ interface GatewayArgs {
 }
 
 export function createApiGateway(args: GatewayArgs) {
-	const httpApi = new aws.apigatewayv2.Api("http-api", {
-		protocolType: "HTTP",
-		corsConfiguration: {
-			allowOrigins: ["http://localhost:3000"],
-			allowMethods: ["POST", "GET", "OPTIONS"],
-			allowHeaders: ["content-type", "authorization"],
-			maxAge: 300,
-		},
-	});
+  const httpApi = new aws.apigatewayv2.Api("http-api", {
+    protocolType: "HTTP",
+    corsConfiguration: {
+      allowOrigins: ["http://localhost:3000", "https://share.apps.nacou.dev"],
+      allowMethods: ["POST", "GET", "OPTIONS"],
+      allowHeaders: ["content-type", "authorization"],
+      maxAge: 300,
+    },
+  });
 
 	const apiAuthorizer = new aws.apigatewayv2.Authorizer("api-authorizer", {
 		apiId: httpApi.id,
