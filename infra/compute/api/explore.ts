@@ -1,26 +1,25 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 
-interface ListArgs {
+interface ExploreArgs {
 	httpApi: aws.apigatewayv2.Api;
-	apiAuthorizer: aws.apigatewayv2.Authorizer;
 	tableName: pulumi.Input<string>;
 }
 
-export function createListRoute(args: ListArgs) {
-	const lambdaRole = new aws.iam.Role("list-lambda-role", {
+export function createExploreRoute(args: ExploreArgs) {
+	const lambdaRole = new aws.iam.Role("explore-lambda-role", {
 		assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({
 			Service: "lambda.amazonaws.com",
 		}),
 	});
 
-	new aws.iam.RolePolicyAttachment("list-lambda-logs", {
+	new aws.iam.RolePolicyAttachment("explore-lambda-logs", {
 		role: lambdaRole.name,
 		policyArn:
 			"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
 	});
 
-	new aws.iam.RolePolicy("list-dynamo-policy", {
+	new aws.iam.RolePolicy("explore-dynamo-policy", {
 		role: lambdaRole.name,
 		policy: pulumi.all([args.tableName]).apply(([tableName]) =>
 			JSON.stringify({
@@ -28,7 +27,7 @@ export function createListRoute(args: ListArgs) {
 				Statement: [
 					{
 						Effect: "Allow",
-						Action: ["dynamodb:Query"],
+						Action: ["dynamodb:Query", "dynamodb:Scan"],
 						Resource: [
 							`arn:aws:dynamodb:*:*:table/${tableName}`,
 							`arn:aws:dynamodb:*:*:table/${tableName}/index/*`,
@@ -39,12 +38,12 @@ export function createListRoute(args: ListArgs) {
 		),
 	});
 
-	const listLambda = new aws.lambda.Function("listSharesFunction", {
+	const exploreLambda = new aws.lambda.Function("exploreSharesFunction", {
 		code: new pulumi.asset.AssetArchive({
-			"list.mjs": new pulumi.asset.FileAsset("./src/api/list.mjs"),
+			"explore.mjs": new pulumi.asset.FileAsset("./src/api/explore.mjs"),
 		}),
 		runtime: "nodejs24.x",
-		handler: "list.handler",
+		handler: "explore.handler",
 		role: lambdaRole.arn,
 		environment: {
 			variables: {
@@ -53,28 +52,26 @@ export function createListRoute(args: ListArgs) {
 		},
 	});
 
-	const listIntegration = new aws.apigatewayv2.Integration(
-		"list-shares-integration",
+	const exploreIntegration = new aws.apigatewayv2.Integration(
+		"explore-shares-integration",
 		{
 			apiId: args.httpApi.id,
 			integrationType: "AWS_PROXY",
-			integrationUri: listLambda.arn,
+			integrationUri: exploreLambda.arn,
 			payloadFormatVersion: "2.0",
 		},
 	);
 
-	new aws.apigatewayv2.Route("list-shares-route", {
+	new aws.apigatewayv2.Route("explore-shares-route", {
 		apiId: args.httpApi.id,
-		routeKey: "GET /api/shares",
-		target: pulumi.interpolate`integrations/${listIntegration.id}`,
-		authorizationType: "JWT",
-		authorizerId: args.apiAuthorizer.id,
+		routeKey: "GET /api/explore",
+		target: pulumi.interpolate`integrations/${exploreIntegration.id}`,
 	});
 
-	new aws.lambda.Permission("api-gateway-list-invoke", {
+	new aws.lambda.Permission("api-gateway-explore-invoke", {
 		action: "lambda:InvokeFunction",
-		function: listLambda.name,
+		function: exploreLambda.name,
 		principal: "apigateway.amazonaws.com",
-		sourceArn: pulumi.interpolate`${args.httpApi.executionArn}/*/*/api/shares`,
+		sourceArn: pulumi.interpolate`${args.httpApi.executionArn}/*/*/api/explore`,
 	});
 }

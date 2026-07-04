@@ -65,7 +65,7 @@ export function createWorkerCompute(args: WorkerComputeArgs) {
 
     const s3SyncLambda = new aws.lambda.Function("s3SyncWorker", {
         code: new pulumi.asset.AssetArchive({
-            ".": new pulumi.asset.FileArchive("./src/workers"),
+            "s3-sync.mjs": new pulumi.asset.FileAsset("./src/workers/s3-sync.mjs"),
         }),
         runtime: "nodejs24.x",
         handler: "s3-sync.handler",

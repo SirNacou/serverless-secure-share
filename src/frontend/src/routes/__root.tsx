@@ -1,16 +1,11 @@
 import { ThemeProvider } from "#/components/theme-provider";
 import { Toaster } from "#/components/ui/sonner";
 import { TooltipProvider } from "#/components/ui/tooltip";
-import { awsConfig } from "#/config/aws-config";
 import { AuthProvider } from "#/lib/auth-context";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { FormDevtoolsPanel } from "@tanstack/react-form-devtools";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { Amplify } from "aws-amplify";
-
-Amplify.configure(awsConfig);
-
 export const Route = createRootRoute({
 	component: RootComponent,
 });

@@ -55,7 +55,7 @@ export function createUploadRoute(args: UploadArgs) {
 
 	const generateUrlLambda = new aws.lambda.Function("generateUrlFunction", {
 		code: new pulumi.asset.AssetArchive({
-			".": new pulumi.asset.FileArchive("./src/api"),
+			"upload.mjs": new pulumi.asset.FileAsset("./src/api/upload.mjs"),
 		}),
 		runtime: "nodejs24.x",
 		handler: "upload.handler",

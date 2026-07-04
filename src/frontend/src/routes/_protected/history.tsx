@@ -50,6 +50,7 @@ function RouteComponent() {
 				action: item.action || "UNKNOWN",
 				download_count: 0,
 				max_downloads: null,
+				ttl: item.share_ttl ?? 0,
 				created_at: item.created_at,
 				share_ttl: item.share_ttl,
 				owner_username: item.owner_username,

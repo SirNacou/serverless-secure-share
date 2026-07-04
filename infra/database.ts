@@ -5,6 +5,8 @@ export function createDatabase() {
 		attributes: [
 			{ name: "link_id", type: "S" },
 			{ name: "owner_username", type: "S" },
+			{ name: "visibility", type: "S" },
+			{ name: "created_at", type: "N" },
 		],
 		hashKey: "link_id",
 		billingMode: "PAY_PER_REQUEST",
@@ -18,6 +20,14 @@ export function createDatabase() {
 			{
 				name: "by_owner",
 				keySchemas: [{ attributeName: "owner_username", keyType: "HASH" }],
+				projectionType: "ALL",
+			},
+			{
+				name: "by_visibility",
+				keySchemas: [
+					{ attributeName: "visibility", keyType: "HASH" },
+					{ attributeName: "created_at", keyType: "RANGE" },
+				],
 				projectionType: "ALL",
 			},
 		],

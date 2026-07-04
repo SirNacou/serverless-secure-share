@@ -2,17 +2,19 @@
     "name": "serverless-secure-share",
     "main": "index.ts",
     "devDependencies": {
-        "@types/node": "^25.9.2",
-        "typescript": "^5.0.0"
+        "@types/node": "^25.9.4",
+        "typescript": "^5.9.3"
     },
     "dependencies": {
-        "@aws-sdk/client-s3": "^3.1064.0",
-        "@aws-sdk/client-sqs": "^3.1064.0",
-        "@aws-sdk/s3-request-presigner": "^3.1064.0",
-        "@pulumi/aws": "^7.0.0",
-        "@pulumi/awsx": "^3.0.0",
+        "@aws-sdk/client-s3": "^3.1079.0",
+        "@aws-sdk/client-sqs": "^3.1079.0",
+        "@aws-sdk/s3-request-presigner": "^3.1079.0",
+        "@pulumi/aws": "^7.35.0",
+        "@pulumi/awsx": "^3.6.0",
         "@pulumi/cloudflare": "^6.17.0",
-        "@pulumi/pulumi": "^3.113.0",
+        "@pulumi/command": "^1.2.1",
+        "@pulumi/pulumi": "^3.250.0",
+        "@pulumi/synced-folder": "^0.12.4",
         "@types/aws-lambda": "^8.10.162"
     }
 }

@@ -71,7 +71,7 @@ export function createDownloadRoute(args: DownloadArgs) {
 
     const downloadUrlLambda = new aws.lambda.Function("downloadUrlFunction", {
         code: new pulumi.asset.AssetArchive({
-            ".": new pulumi.asset.FileArchive("./src/api"),
+            "download.mjs": new pulumi.asset.FileAsset("./src/api/download.mjs"),
         }),
         runtime: "nodejs24.x",
         handler: "download.handler",

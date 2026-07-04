@@ -37,7 +37,7 @@ export function createShareInfoRoute(args: ShareInfoArgs) {
 
 	const infoLambda = new aws.lambda.Function("shareInfoFunction", {
 		code: new pulumi.asset.AssetArchive({
-			".": new pulumi.asset.FileArchive("./src/api"),
+			"share-info.mjs": new pulumi.asset.FileAsset("./src/api/share-info.mjs"),
 		}),
 		runtime: "nodejs24.x",
 		handler: "share-info.handler",

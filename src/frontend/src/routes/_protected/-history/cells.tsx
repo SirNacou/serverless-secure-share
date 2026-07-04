@@ -30,7 +30,7 @@ export function formatRelativeTime(ttl: number): string {
 	return "<1m";
 }
 
-export function formatAbsoluteExpiry(ttl: number): string {
+export function formatAbsoluteExpiry(ttl: number | undefined | null): string {
 	if (ttl == null || ttl === 0) return "—";
 	
 	const date = new Date(ttl * 1000);

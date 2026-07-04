@@ -5,6 +5,7 @@ import { createShareInfoRoute } from "./infra/compute/api/share-info";
 import { createApiGateway } from "./infra/compute/api/gateway";
 import { createUploadRoute } from "./infra/compute/api/upload";
 import { createActivityRoute } from "./infra/compute/api/activity";
+import { createExploreRoute } from "./infra/compute/api/explore";
 import { createWorkerCompute } from "./infra/compute/workers";
 import { createAuditWorker } from "./infra/compute/audit";
 import { createDatabase } from "./infra/database";
@@ -54,6 +55,11 @@ createListRoute({
 });
 
 createShareInfoRoute({
+	httpApi: gatewaySystem.httpApi,
+	tableName: database.metadataTable.name,
+});
+
+createExploreRoute({
 	httpApi: gatewaySystem.httpApi,
 	tableName: database.metadataTable.name,
 });

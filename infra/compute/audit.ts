@@ -60,7 +60,7 @@ export function createAuditWorker(args: AuditWorkerArgs) {
 
 	const auditLoggerLambda = new aws.lambda.Function("auditLoggerFunction", {
 		code: new pulumi.asset.AssetArchive({
-			".": new pulumi.asset.FileArchive("./src/workers"),
+			"audit-logger.mjs": new pulumi.asset.FileAsset("./src/workers/audit-logger.mjs"),
 		}),
 		runtime: "nodejs24.x",
 		handler: "audit-logger.handler",

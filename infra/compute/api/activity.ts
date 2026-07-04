@@ -40,7 +40,7 @@ export function createActivityRoute(args: ActivityArgs) {
 
 	const activityLambda = new aws.lambda.Function("activityFunction", {
 		code: new pulumi.asset.AssetArchive({
-			".": new pulumi.asset.FileArchive("./src/api"),
+			"activity.mjs": new pulumi.asset.FileAsset("./src/api/activity.mjs"),
 		}),
 		runtime: "nodejs24.x",
 		handler: "activity.handler",
