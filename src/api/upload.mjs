@@ -1,7 +1,7 @@
-import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { randomUUID } from "node:crypto";
+import { randomUUID, randomBytes } from "node:crypto";
 import { basename } from "node:path";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
@@ -44,6 +44,23 @@ async function emitAudit(linkId, ownerUsername, shareName, assetType, visibility
 	}
 }
 
+function generateShortId() {
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	const bytes = randomBytes(8);
+	let id = "";
+	for (let i = 0; i < bytes.length; i++) {
+		id += chars[bytes[i] % chars.length];
+	}
+	return id;
+}
+
+function validateCustomId(id) {
+	if (id.length < 4 || id.length > 64) return false;
+	if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{2,62}[a-zA-Z0-9]$/.test(id)) return false;
+	if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return false;
+	return true;
+}
+
 export const handler = async (event) => {
 	try {
 		// 1. Extract Cognito Identity from JWT Authorizer Context
@@ -52,7 +69,7 @@ export const handler = async (event) => {
 		// 2. Parse Frontend Configuration Data
 		const body = JSON.parse(event.body);
 		const {
-			name, // <-- EXTRACT FROM FRONTEND PAYLOAD
+			name,
 			payloadType,
 			filename,
 			contentType,
@@ -61,9 +78,41 @@ export const handler = async (event) => {
 			targetUsers,
 			lifespanHours,
 			maxDownloads,
+			customId,
 		} = body;
 
-		const linkId = randomUUID();
+		let linkId;
+		if (customId) {
+			if (!validateCustomId(customId)) {
+				return {
+					statusCode: 400,
+					headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+					body: JSON.stringify({ error: "Invalid custom ID: must be 4-64 characters, using only A-Z, a-z, 0-9, hyphens, and underscores." }),
+				};
+			}
+			const existing = await dynamoClient.send(
+				new GetItemCommand({
+					TableName: process.env.TABLE_NAME,
+					Key: { link_id: { S: customId } },
+				}),
+			);
+			if (existing.Item) {
+				const item = existing.Item;
+				const now = Math.floor(Date.now() / 1000);
+				const ttl = item.ttl?.N ? parseInt(item.ttl.N, 10) : null;
+				const status = item.status?.S;
+				if (ttl && ttl > now && (status === "AVAILABLE" || status === "PENDING_UPLOAD")) {
+					return {
+						statusCode: 409,
+						headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+						body: JSON.stringify({ error: "This custom ID is already in use by an active share." }),
+					};
+				}
+			}
+			linkId = customId;
+		} else {
+			linkId = generateShortId();
+		}
 
 		// Fallback string if frontend validation fails or skips the name input value
 		const safeShareName = name?.trim() || "Untitled Share";
@@ -121,7 +170,7 @@ await dynamoClient.send(
 		} else {
 			// Standard Pre-signed URL loop for physical files
 			const safeFilename = basename(filename).replace(/[^a-zA-Z0-9.-]/g, "_");
-			const s3ObjectKey = `uploads/${linkId}-${safeFilename}`;
+			const s3ObjectKey = `uploads/${linkId}/${safeFilename}`;
 
 await dynamoClient.send(
 			new PutItemCommand({

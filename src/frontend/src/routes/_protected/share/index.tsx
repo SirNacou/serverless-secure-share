@@ -33,6 +33,18 @@ const shareFormSchema = z
 		selectedUsers: z.array(z.string()),
 		lifespan: z.string(),
 		maxDownloads: z.string(),
+		customId: z
+			.string()
+			.refine(
+				(val) => {
+					if (!val) return true;
+					if (val.length < 4 || val.length > 64) return false;
+					if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{2,62}[a-zA-Z0-9]$/.test(val)) return false;
+					if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val)) return false;
+					return true;
+				},
+				{ message: "4-64 chars, only letters, numbers, hyphens, underscores. No UUID patterns." },
+			),
 	})
 	.superRefine((data, ctx) => {
 		if (data.payloadType === "file" && data.files.length < 1) {
@@ -54,7 +66,7 @@ const shareFormSchema = z
 type ShareFormValues = z.infer<typeof shareFormSchema>;
 
 const defaultValues: ShareFormValues = {
-	name: "", // Initialize empty
+	name: "",
 	payloadType: "file",
 	files: [],
 	textContent: "",
@@ -62,6 +74,7 @@ const defaultValues: ShareFormValues = {
 	selectedUsers: [],
 	lifespan: lifespanOptions[0].value,
 	maxDownloads: maxDownloadsOptions[0].value,
+	customId: "",
 };
 
 function RouteComponent() {
@@ -101,6 +114,7 @@ function RouteComponent() {
 								value.visibility === "private" ? value.selectedUsers : [],
 							lifespanHours: value.lifespan,
 							maxDownloads: value.maxDownloads,
+							customId: value.customId.trim() || undefined,
 						},
 					})
 					.json<ShareUploadResponse | ApiErrorResponse>();
@@ -225,6 +239,40 @@ function RouteComponent() {
 							/>
 						</div>
 					)}
+				</form.Field>
+				<form.Field name="customId">
+					{(field) => {
+						const val = field.state.value;
+						const errors = field.state.meta.errors;
+						const errorMsg = errors?.[0]?.message;
+						const isCustom = val.trim().length > 0;
+						return (
+							<div className="bg-card border border-border rounded-xl p-4 space-y-2">
+								<label
+									htmlFor={field.name}
+									className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+								>
+									Custom Link ID (optional)
+								</label>
+								<input
+									id={field.name}
+									name={field.name}
+									value={val}
+									onChange={(e) => field.handleChange(e.target.value)}
+									disabled={uploadStatus === "uploading"}
+									placeholder="e.g., my-project-alpha"
+									className="w-full h-10 px-3 text-sm bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/50"
+								/>
+								{isCustom && errorMsg ? (
+									<p className="text-[11px] text-destructive">{errorMsg}</p>
+								) : isCustom ? (
+									<p className="text-[11px] text-emerald-500">Custom ID looks good</p>
+								) : (
+									<p className="text-[11px] text-muted-foreground">Leave empty for auto-generated short ID</p>
+								)}
+							</div>
+						);
+					}}
 				</form.Field>
 				<form.Field name="visibility">
 					{(field) => (

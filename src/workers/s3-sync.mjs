@@ -14,7 +14,7 @@ export const handler = async (event) => {
             // BRANCH 1: Handle S3 Object Created Event (S3 Notification)
             if (record.s3) {
                 const fileKey = decodeURIComponent(record.s3.object.key.replace(/\+/g, " "));
-                const match = fileKey.match(/uploads\/([a-f0-9-]+)-/);
+                const match = fileKey.match(/uploads\/([^/]+)\//);
                 if (!match) continue;
 
                 const uploadId = match[1];
