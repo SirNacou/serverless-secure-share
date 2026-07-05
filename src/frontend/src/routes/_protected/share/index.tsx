@@ -114,7 +114,7 @@ function RouteComponent() {
 								value.visibility === "private" ? value.selectedUsers : [],
 							lifespanHours: value.lifespan,
 							maxDownloads: value.maxDownloads,
-							customId: value.customId.trim() || undefined,
+							customId: value.customId.trim(),
 						},
 					})
 					.json<ShareUploadResponse | ApiErrorResponse>();
