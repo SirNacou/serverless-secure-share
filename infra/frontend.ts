@@ -30,7 +30,6 @@ export function createFrontendHosting(_args: FrontendArgs) {
 	// Create a separate AWS provider for us-east-1 (required for ACM certificates used with CloudFront)
 	const usEast1Provider = new aws.Provider("us-east-1", {
 		region: "us-east-1",
-		profile: "dev",
 	});
 
 	// ACM Certificate for share.apps.nacou.dev (must be in us-east-1 for CloudFront)
@@ -184,8 +183,8 @@ export function createFrontendHosting(_args: FrontendArgs) {
 	const FRONTEND_DIST = "./src/frontend/dist";
 	new command.local.Command("frontend-sync", {
 		create: pulumi.interpolate`
-			aws s3 sync ${FRONTEND_DIST} s3://${bucket.bucket}/ --delete --profile dev &&
-			aws cloudfront create-invalidation --distribution-id ${distribution.id} --paths /* --profile dev
+			aws s3 sync ${FRONTEND_DIST} s3://${bucket.bucket}/ --delete &&
+			aws cloudfront create-invalidation --distribution-id ${distribution.id} --paths /*
 		`,
 		triggers: [distribution.id, hashDir(FRONTEND_DIST)],
 	});

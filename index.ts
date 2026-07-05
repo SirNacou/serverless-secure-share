@@ -1,4 +1,5 @@
 import { createAuth } from "./infra/auth";
+import { createCiRole } from "./infra/ci";
 import { createDownloadRoute } from "./infra/compute/api/download";
 import { createListRoute } from "./infra/compute/api/list";
 import { createShareInfoRoute } from "./infra/compute/api/share-info";
@@ -12,6 +13,9 @@ import { createDatabase } from "./infra/database";
 import { createFrontendHosting } from "./infra/frontend";
 import { createMessaging } from "./infra/messaging";
 import { createStorage } from "./infra/storage";
+
+// 0. CI/CD Bootstrap
+const ci = createCiRole();
 
 // 1. Storage, Identity, and Messaging Layers
 const storage = createStorage();
@@ -84,6 +88,7 @@ createAuditWorker({
 });
 
 // Outputs
+export const ciRoleArn = ci.ciRoleArn;
 export const cognitoPoolId = auth.userPool.id;
 export const cognitoClientId = auth.userPoolClient.id;
 export const publicApiEndpoint = gatewaySystem.httpApi.apiEndpoint;
