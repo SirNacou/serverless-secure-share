@@ -49,7 +49,7 @@ export function VisibilitySelector({
 						htmlFor="visibility-public"
 						className="flex flex-col justify-center items-center w-full bg-transparent border border-border rounded-xl p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-accent transition-all text-center"
 					>
-						<span className="text-sm font-semibold">Public Feed</span>
+						<span className="text-sm font-semibold">Public</span>
 					</Label>
 				</div>
 			</RadioGroup>

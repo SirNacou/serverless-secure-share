@@ -26,9 +26,9 @@ export function createUploadRoute(args: UploadArgs) {
 						Version: "2012-10-17",
 						Statement: [
 							{
-								Sid: "DynamoDBWriteAccess",
+								Sid: "DynamoDBAccess",
 								Effect: "Allow",
-								Action: ["dynamodb:PutItem"],
+								Action: ["dynamodb:GetItem", "dynamodb:PutItem"],
 								Resource: [`arn:aws:dynamodb:*:*:table/${tableName}`],
 							},
 							{
