@@ -25,23 +25,7 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Get API endpoint
-        id: api-endpoint
-        run: |
-          ENDPOINT=$(bunx pulumi stack output publicApiEndpoint --stack dev 2>/dev/null || echo "")
-          if [ -z "$ENDPOINT" ]; then
-            echo "value=${{ secrets.API_ENDPOINT }}" >> $GITHUB_OUTPUT
-          else
-            echo "value=$ENDPOINT" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Build frontend
-        working-directory: src/frontend
-        run: |
-          bun install
-          VITE_API_ENDPOINT=${{ steps.api-endpoint.outputs.value }} bun run build
-
-      - name: Deploy with Pulumi
+      - name: Deploy
         run: bunx pulumi up --stack dev --yes
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}

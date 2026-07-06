@@ -26,7 +26,7 @@ interface FrontendArgs {
 	apiEndpoint: pulumi.Input<string>;
 }
 
-export function createFrontendHosting(_args: FrontendArgs) {
+export function createFrontendHosting(args: FrontendArgs) {
 	// Create a separate AWS provider for us-east-1 (required for ACM certificates used with CloudFront)
 	const usEast1Provider = new aws.Provider("us-east-1", {
 		region: "us-east-1",
@@ -80,7 +80,7 @@ export function createFrontendHosting(_args: FrontendArgs) {
 
 	// S3 bucket for frontend hosting
 	const bucket = new aws.s3.Bucket("frontend-bucket", {
-		forceDestroy: true, // Allow deletion of non-empty bucket for redeployments
+		forceDestroy: true,
 	});
 
 	// Block all public access to the bucket
@@ -150,7 +150,6 @@ export function createFrontendHosting(_args: FrontendArgs) {
 					},
 				},
 			},
-			// SPA fallback: handle 404 by serving index.html
 			customErrorResponses: [
 				{
 					errorCode: 403,
@@ -163,8 +162,7 @@ export function createFrontendHosting(_args: FrontendArgs) {
 					responsePagePath: "/index.html",
 				},
 			],
-			priceClass: "PriceClass_100", // Use only NA/Europe edge locations (cheaper)
-			// Custom domain
+			priceClass: "PriceClass_100",
 			aliases: ["share.apps.nacou.dev"],
 			viewerCertificate: {
 				acmCertificateArn: certificateValidation.certificateArn,
@@ -179,14 +177,15 @@ export function createFrontendHosting(_args: FrontendArgs) {
 		},
 	);
 
-	// Sync frontend dist to S3 and invalidate CloudFront
-	const FRONTEND_DIST = "./src/frontend/dist";
+	// Build frontend, sync to S3, and invalidate CloudFront
 	new command.local.Command("frontend-sync", {
 		create: pulumi.interpolate`
-			aws s3 sync ${FRONTEND_DIST} s3://${bucket.bucket}/ --delete &&
+			cd ${"./src/frontend"} &&
+			VITE_API_ENDPOINT=${args.apiEndpoint} bun run build &&
+			aws s3 sync dist/ s3://${bucket.bucket}/ --delete &&
 			aws cloudfront create-invalidation --distribution-id ${distribution.id} --paths /*
 		`,
-		triggers: [distribution.id, hashDir(FRONTEND_DIST)],
+		triggers: [distribution.id, hashDir("./src/frontend/src")],
 	});
 
 	// Cloudflare CNAME record for the custom domain
@@ -196,7 +195,7 @@ export function createFrontendHosting(_args: FrontendArgs) {
 		content: distribution.domainName,
 		type: "CNAME",
 		ttl: 1,
-		proxied: false, // DNS only (no Cloudflare proxy — direct to CloudFront)
+		proxied: false,
 	});
 
 	return {
