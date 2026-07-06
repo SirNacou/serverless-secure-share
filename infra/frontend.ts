@@ -181,6 +181,7 @@ export function createFrontendHosting(args: FrontendArgs) {
 	new command.local.Command("frontend-sync", {
 		create: pulumi.interpolate`
 			cd ${"./src/frontend"} &&
+			bun install &&
 			VITE_API_ENDPOINT=${args.apiEndpoint} bun run build &&
 			aws s3 sync dist/ s3://${bucket.bucket}/ --delete &&
 			aws cloudfront create-invalidation --distribution-id ${distribution.id} --paths /*
