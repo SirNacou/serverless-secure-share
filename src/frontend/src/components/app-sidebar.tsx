@@ -32,7 +32,7 @@ const AppSidebar = (_props: Props) => {
 									className:
 										"bg-sidebar-accent text-sidebar-accent-foreground font-medium",
 								}}
-								to="/active"
+								to="/share"
 							>
 								<ShareIcon />
 								<span>My Shares</span>

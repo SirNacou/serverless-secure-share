@@ -197,7 +197,7 @@ function RouteComponent() {
 				<div className="flex items-center gap-3">
 					{isAuthenticated ? (
 						<Link
-							to="/active"
+							to="/share"
 							className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/80 transition-colors"
 						>
 							<Sparkles className="size-3.5" />
