@@ -82,6 +82,7 @@ function RouteComponent() {
 	const [uploadProgress, setUploadProgress] = useState<number>(0);
 	const [apiError, setApiError] = useState<string>("");
 	const [generatedLink, setGeneratedLink] = useState<string>("");
+	const [generatedShareId, setGeneratedShareId] = useState<string>("");
 	const router = useRouter();
 
 	const form = useForm({
@@ -95,6 +96,7 @@ function RouteComponent() {
 			setUploadProgress(0);
 			setApiError("");
 			setGeneratedLink("");
+			setGeneratedShareId("");
 
 			try {
 				// Metadata Registration step
@@ -168,6 +170,7 @@ function RouteComponent() {
 				});
 				const publicShareUrl = `${window.location.origin}${pathname}`;
 				setGeneratedLink(publicShareUrl);
+				setGeneratedShareId(data.uploadId);
 				setUploadStatus("success");
 			} catch (error: unknown) {
 				console.error(error);
@@ -371,6 +374,7 @@ function RouteComponent() {
 				payloadType={form.getFieldValue("payloadType")}
 				onClose={() => setUploadStatus("idle")}
 				shareUrl={generatedLink}
+				shareId={generatedShareId}
 			/>
 		</form>
 	);

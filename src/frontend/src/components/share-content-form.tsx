@@ -36,18 +36,18 @@ export function ShareContentForm({
 			onValueChange={(val) => onTypeChange(val as PayloadType)}
 		>
 			<TabsList
-				className="w-full justify-start text-xl font-bold gap-0 rounded-none border-b p-0 bg-transparent h-10"
+				className="w-full justify-start text-2xl font-bold gap-0 rounded-none border-b p-0 bg-transparent h-12"
 				variant={"line"}
 			>
 				<TabsTrigger
-					className="data-active:border-primary! -mb-px rounded-none border-b-2 border-transparent h-full px-4"
+					className="data-active:border-primary! -mb-px rounded-none border-b-2 border-transparent h-full px-6 text-xl font-bold"
 					value="file"
 					disabled={disabled}
 				>
 					File
 				</TabsTrigger>
 				<TabsTrigger
-					className="data-active:border-primary! -mb-px rounded-none border-b-2 border-transparent h-full px-4"
+					className="data-active:border-primary! -mb-px rounded-none border-b-2 border-transparent h-full px-6 text-xl font-bold"
 					value="text"
 					disabled={disabled}
 				>
