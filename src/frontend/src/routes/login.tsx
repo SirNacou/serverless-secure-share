@@ -5,7 +5,7 @@ import { useAuth } from "#/lib/auth-context";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import MdiGithub from "~icons/mdi/github";
+import MdiGoogle from "~icons/mdi/google";
 
 export const Route = createFileRoute("/login")({
 	validateSearch: (search: Record<string, string | undefined>) => ({
@@ -22,7 +22,7 @@ function RouteComponent() {
 		isAuthenticated,
 		isLoading,
 		signIn,
-		signInWithGitHub,
+		signInWithGoogle,
 		signUp,
 		confirmSignUp,
 		error,
@@ -163,10 +163,10 @@ function RouteComponent() {
 							type="button"
 							variant="outline"
 							className="w-full h-10 gap-2"
-							onClick={signInWithGitHub}
+							onClick={signInWithGoogle}
 						>
-							<MdiGithub />
-							GitHub
+							<MdiGoogle />
+							Google
 						</Button>
 						<p className="text-xs text-center text-muted-foreground">
 							Don't have an account?{" "}

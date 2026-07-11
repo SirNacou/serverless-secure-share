@@ -2,7 +2,7 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 
 export function createAuth() {
-    const config = new pulumi.Config("github");
+    const config = new pulumi.Config("google");
 
     const userPool = new aws.cognito.UserPool("app-user-pool", {
         name: "serverless-secure-share-pool",
@@ -24,23 +24,17 @@ export function createAuth() {
     const region = aws.getRegionOutput().name;
     const cognitoDomain = pulumi.interpolate`${domain.domain}.auth.${region}.amazoncognito.com`;
 
-    const githubClientId = config.requireSecret("clientId");
-    const githubClientSecret = config.requireSecret("clientSecret");
+    const googleClientId = config.requireSecret("clientId");
+    const googleClientSecret = config.requireSecret("clientSecret");
 
-    const githubIdp = new aws.cognito.IdentityProvider("github", {
+    const googleIdp = new aws.cognito.IdentityProvider("google", {
         userPoolId: userPool.id,
-        providerName: "GitHub",
-        providerType: "OIDC",
+        providerName: "Google",
+        providerType: "Google",
         providerDetails: {
-            client_id: githubClientId,
-            client_secret: githubClientSecret,
-            authorize_scopes: "user:email",
-            authorize_url: "https://github.com/login/oauth/authorize",
-            token_url: "https://github.com/login/oauth/access_token",
-            attributes_url: "https://api.github.com/user",
-            attributes_url_add_attributes: "false",
-            attributes_request_method: "GET",
-            oidc_issuer: "https://github.com",
+            client_id: googleClientId,
+            client_secret: googleClientSecret,
+            authorize_scopes: "email profile",
         },
         attributeMapping: {
             email: "email",
@@ -65,14 +59,14 @@ export function createAuth() {
         ],
         supportedIdentityProviders: [
             "COGNITO",
-            githubIdp.providerName,
+            googleIdp.providerName,
         ],
         allowedOauthFlowsUserPoolClient: true,
         allowedOauthFlows: ["code"],
         allowedOauthScopes: ["email", "openid", "profile"],
     });
 
-    const githubCallbackUrl = pulumi.interpolate`https://${cognitoDomain}/oauth2/idpresponse`;
+    const googleCallbackUrl = pulumi.interpolate`https://${cognitoDomain}/oauth2/idpresponse`;
 
-    return { userPool, userPoolClient, domain, cognitoDomain, githubCallbackUrl };
+    return { userPool, userPoolClient, domain, cognitoDomain, googleCallbackUrl };
 }

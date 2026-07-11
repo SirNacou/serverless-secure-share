@@ -18,7 +18,7 @@ interface AuthContextValue {
 	isLoading: boolean;
 	error: string | null;
 	signIn: (email: string, password: string) => Promise<void>;
-	signInWithGitHub: () => Promise<void>;
+	signInWithGoogle: () => Promise<void>;
 	signUp: (
 		email: string,
 		password: string,
@@ -53,8 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		checkAuth();
 	}, []);
 
-	async function signInWithGitHub() {
-		await signInWithRedirect({ provider: { custom: "GitHub" } });
+	async function signInWithGoogle() {
+		await signInWithRedirect({ provider: "Google" });
 	}
 
 	async function signIn(email: string, password: string) {
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 				isLoading,
 				error,
 				signIn,
-				signInWithGitHub,
+				signInWithGoogle,
 				signUp,
 				confirmSignUp,
 				signOut,

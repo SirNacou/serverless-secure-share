@@ -93,6 +93,6 @@ export const ciRoleArn = ci.ciRoleArn;
 export const cognitoPoolId = auth.userPool.id;
 export const cognitoClientId = auth.userPoolClient.id;
 export const cognitoDomain = auth.cognitoDomain;
-export const githubOAuthCallbackUrl = auth.githubCallbackUrl;
+export const googleOAuthCallbackUrl = auth.googleCallbackUrl;
 export const publicApiEndpoint = gatewaySystem.httpApi.apiEndpoint;
 export const frontendDomain = frontendSystem.distributionDomain;
