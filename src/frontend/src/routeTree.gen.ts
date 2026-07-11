@@ -14,6 +14,7 @@ import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as ProtectedRouteRouteImport } from './routes/_protected/route'
 import { Route as ProtectedIndexRouteImport } from './routes/_protected/index'
 import { Route as SShareIdRouteImport } from './routes/s/$shareId'
+import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as ProtectedShareRouteImport } from './routes/_protected/share'
 import { Route as ProtectedHistoryRouteImport } from './routes/_protected/history'
 import { Route as ProtectedShareIndexRouteImport } from './routes/_protected/share/index'
@@ -43,6 +44,11 @@ const SShareIdRoute = SShareIdRouteImport.update({
   path: '/s/$shareId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProtectedShareRoute = ProtectedShareRouteImport.update({
   id: '/share',
   path: '/share',
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/history': typeof ProtectedHistoryRoute
   '/share': typeof ProtectedShareRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/s/$shareId': typeof SShareIdRoute
   '/share/create': typeof ProtectedShareCreateRoute
   '/share/': typeof ProtectedShareIndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/explore': typeof ExploreRoute
   '/login': typeof LoginRoute
   '/history': typeof ProtectedHistoryRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/s/$shareId': typeof SShareIdRoute
   '/': typeof ProtectedIndexRoute
   '/share/create': typeof ProtectedShareCreateRoute
@@ -90,6 +98,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_protected/history': typeof ProtectedHistoryRoute
   '/_protected/share': typeof ProtectedShareRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/s/$shareId': typeof SShareIdRoute
   '/_protected/': typeof ProtectedIndexRoute
   '/_protected/share/create': typeof ProtectedShareCreateRoute
@@ -103,6 +112,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/history'
     | '/share'
+    | '/auth/callback'
     | '/s/$shareId'
     | '/share/create'
     | '/share/'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/explore'
     | '/login'
     | '/history'
+    | '/auth/callback'
     | '/s/$shareId'
     | '/'
     | '/share/create'
@@ -122,6 +133,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_protected/history'
     | '/_protected/share'
+    | '/auth/callback'
     | '/s/$shareId'
     | '/_protected/'
     | '/_protected/share/create'
@@ -132,6 +144,7 @@ export interface RootRouteChildren {
   ProtectedRouteRoute: typeof ProtectedRouteRouteWithChildren
   ExploreRoute: typeof ExploreRoute
   LoginRoute: typeof LoginRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   SShareIdRoute: typeof SShareIdRoute
 }
 
@@ -170,6 +183,13 @@ declare module '@tanstack/react-router' {
       path: '/s/$shareId'
       fullPath: '/s/$shareId'
       preLoaderRoute: typeof SShareIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_protected/share': {
@@ -237,6 +257,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProtectedRouteRoute: ProtectedRouteRouteWithChildren,
   ExploreRoute: ExploreRoute,
   LoginRoute: LoginRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   SShareIdRoute: SShareIdRoute,
 }
 export const routeTree = rootRouteImport

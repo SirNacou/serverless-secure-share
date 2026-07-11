@@ -2,3 +2,7 @@ config:
   aws:region: ap-southeast-1
   cloudflare:apiToken:
     secure: AAABANg6XjmYC8J+HYhdBae64atY/VRBCNTJbrpdK6Btzt+oXgNkCOWDWHNK1Mn1n5oGv63jdKk1ZNJfWmTZTG4OyYbV1v3srzAyRs8Sgm/adGCv7g==
+  github:clientId:
+    secure: AAABAIwwMIcxpyFHdsXx4aCjxL+V43mQ2p8PUfYbyJlZE4grs7UkQtjY5A==
+  github:clientSecret:
+    secure: AAABACDEgHOncL4hsF7BCm9dRHmiV5ShC0hQq0j48topoNT6CPumoiIjmw==

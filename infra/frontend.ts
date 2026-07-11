@@ -24,6 +24,7 @@ function hashDir(dir: string): string {
 
 interface FrontendArgs {
 	apiEndpoint: pulumi.Input<string>;
+	cognitoDomain: pulumi.Input<string>;
 }
 
 export function createFrontendHosting(args: FrontendArgs) {
@@ -182,7 +183,7 @@ export function createFrontendHosting(args: FrontendArgs) {
 		create: pulumi.interpolate`
 			cd ${"./src/frontend"} &&
 			bun install &&
-			VITE_API_ENDPOINT=${args.apiEndpoint} bun run build &&
+			VITE_API_ENDPOINT=${args.apiEndpoint} VITE_COGNITO_DOMAIN=${args.cognitoDomain} bun run build &&
 			aws s3 sync dist/ s3://${bucket.bucket}/ --delete &&
 			aws cloudfront create-invalidation --distribution-id ${distribution.id} --paths /*
 		`,

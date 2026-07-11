@@ -5,6 +5,7 @@ import { useAuth } from "#/lib/auth-context";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import MdiGithub from "~icons/mdi/github";
 
 export const Route = createFileRoute("/login")({
 	validateSearch: (search: Record<string, string | undefined>) => ({
@@ -21,6 +22,7 @@ function RouteComponent() {
 		isAuthenticated,
 		isLoading,
 		signIn,
+		signInWithGitHub,
 		signUp,
 		confirmSignUp,
 		error,
@@ -54,7 +56,7 @@ function RouteComponent() {
 		);
 	}
 
-	async function handleSignIn(e: React.FormEvent) {
+	async function handleSignIn(e: React.SubmitEvent<HTMLFormElement>) {
 		e.preventDefault();
 		setSubmitting(true);
 		try {
@@ -66,7 +68,7 @@ function RouteComponent() {
 		}
 	}
 
-	async function handleSignUp(e: React.FormEvent) {
+	async function handleSignUp(e: React.SubmitEvent<HTMLFormElement>) {
 		e.preventDefault();
 		if (password !== confirmPassword) {
 			toast.error("Passwords do not match");
@@ -84,7 +86,7 @@ function RouteComponent() {
 		}
 	}
 
-	async function handleConfirmSignUp(e: React.FormEvent) {
+	async function handleConfirmSignUp(e: React.SubmitEvent<HTMLFormElement>) {
 		e.preventDefault();
 		setSubmitting(true);
 		try {
@@ -146,6 +148,25 @@ function RouteComponent() {
 						</div>
 						<Button type="submit" className="w-full h-10" disabled={submitting}>
 							{submitting ? "Signing in..." : "Sign In"}
+						</Button>
+						<div className="relative">
+							<div className="absolute inset-0 flex items-center">
+								<span className="w-full border-t border-border" />
+							</div>
+							<div className="relative flex justify-center text-xs uppercase">
+								<span className="bg-card px-2 text-muted-foreground">
+									or continue with
+								</span>
+							</div>
+						</div>
+						<Button
+							type="button"
+							variant="outline"
+							className="w-full h-10 gap-2"
+							onClick={signInWithGitHub}
+						>
+							<MdiGithub />
+							GitHub
 						</Button>
 						<p className="text-xs text-center text-muted-foreground">
 							Don't have an account?{" "}

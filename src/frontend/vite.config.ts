@@ -3,6 +3,7 @@ import { devtools } from '@tanstack/devtools-vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import Icons from 'unplugin-icons/vite'
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
@@ -11,6 +12,11 @@ const config = defineConfig({
     tailwindcss(),
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     viteReact(),
+    Icons({
+      autoInstall: true,
+      compiler: 'jsx',
+      jsx: 'react',
+    })
   ],
   build: {
     rolldownOptions: {

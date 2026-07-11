@@ -3,6 +3,7 @@
 import {
 	confirmSignUp as amplifyConfirmSignUp,
 	signIn as amplifySignIn,
+	signInWithRedirect,
 	signOut as amplifySignOut,
 	signUp as amplifySignUp,
 	fetchAuthSession,
@@ -17,6 +18,7 @@ interface AuthContextValue {
 	isLoading: boolean;
 	error: string | null;
 	signIn: (email: string, password: string) => Promise<void>;
+	signInWithGitHub: () => Promise<void>;
 	signUp: (
 		email: string,
 		password: string,
@@ -50,6 +52,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 		checkAuth();
 	}, []);
+
+	async function signInWithGitHub() {
+		await signInWithRedirect({ provider: { custom: "GitHub" } });
+	}
 
 	async function signIn(email: string, password: string) {
 		setError(null);
@@ -140,6 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 				isLoading,
 				error,
 				signIn,
+				signInWithGitHub,
 				signUp,
 				confirmSignUp,
 				signOut,
