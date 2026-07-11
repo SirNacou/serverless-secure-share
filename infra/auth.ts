@@ -30,11 +30,16 @@ export function createAuth() {
     const githubIdp = new aws.cognito.IdentityProvider("github", {
         userPoolId: userPool.id,
         providerName: "GitHub",
-        providerType: "GitHub",
+        providerType: "OIDC",
         providerDetails: {
             client_id: githubClientId,
             client_secret: githubClientSecret,
             authorize_scopes: "user:email",
+            authorize_url: "https://github.com/login/oauth/authorize",
+            token_url: "https://github.com/login/oauth/access_token",
+            attributes_url: "https://api.github.com/user",
+            attributes_url_add_attributes: "false",
+            oidc_issuer: "https://github.com",
         },
         attributeMapping: {
             email: "email",
