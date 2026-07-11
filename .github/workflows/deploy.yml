@@ -25,7 +25,24 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Deploy
+      - name: Deploy infrastructure
         run: bunx pulumi up --stack dev --yes
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+      - name: Build frontend
+        working-directory: src/frontend
+        run: |
+          bun install
+          echo "VITE_API_ENDPOINT=$(bunx pulumi --cwd ../.. stack output publicApiEndpoint)" > .env
+          echo "VITE_COGNITO_DOMAIN=$(bunx pulumi --cwd ../.. stack output cognitoDomain)" >> .env
+          echo "VITE_COGNITO_USER_POOL_ID=$(bunx pulumi --cwd ../.. stack output cognitoPoolId)" >> .env
+          echo "VITE_COGNITO_CLIENT_ID=$(bunx pulumi --cwd ../.. stack output cognitoClientId)" >> .env
+          bun run build
+
+      - name: Deploy frontend to S3
+        run: |
+          BUCKET=$(bunx pulumi stack output frontendBucketName)
+          DIST_ID=$(bunx pulumi stack output frontendDistributionId)
+          aws s3 sync src/frontend/dist/ s3://$BUCKET/ --delete
+          aws cloudfront create-invalidation --distribution-id $DIST_ID --paths /*

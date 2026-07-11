@@ -1,33 +1,8 @@
 import * as aws from "@pulumi/aws";
 import * as cloudflare from "@pulumi/cloudflare";
-import * as command from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
-import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 
-function hashDir(dir: string): string {
-  const hash = createHash("sha256");
-  function walk(dirPath: string) {
-    for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
-      const fullPath = join(dirPath, entry.name);
-      if (entry.isDirectory()) {
-        walk(fullPath);
-      } else if (entry.isFile()) {
-        hash.update(readFileSync(fullPath));
-      }
-    }
-  }
-  walk(dir);
-  return hash.digest("hex");
-}
-
-interface FrontendArgs {
-	apiEndpoint: pulumi.Input<string>;
-	cognitoDomain: pulumi.Input<string>;
-}
-
-export function createFrontendHosting(args: FrontendArgs) {
+export function createFrontendHosting() {
 	// Create a separate AWS provider for us-east-1 (required for ACM certificates used with CloudFront)
 	const usEast1Provider = new aws.Provider("us-east-1", {
 		region: "us-east-1",
@@ -177,18 +152,6 @@ export function createFrontendHosting(args: FrontendArgs) {
 			},
 		},
 	);
-
-	// Build frontend, sync to S3, and invalidate CloudFront
-	new command.local.Command("frontend-sync", {
-		create: pulumi.interpolate`
-			cd ${"./src/frontend"} &&
-			bun install &&
-			VITE_API_ENDPOINT=${args.apiEndpoint} VITE_COGNITO_DOMAIN=${args.cognitoDomain} bun run build &&
-			aws s3 sync dist/ s3://${bucket.bucket}/ --delete &&
-			aws cloudfront create-invalidation --distribution-id ${distribution.id} --paths /*
-		`,
-		triggers: [distribution.id, hashDir("./src/frontend/src")],
-	});
 
 	// Cloudflare CNAME record for the custom domain
 	const cloudflareCname = new cloudflare.DnsRecord("frontend-cname", {

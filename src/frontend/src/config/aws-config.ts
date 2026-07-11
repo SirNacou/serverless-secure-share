@@ -1,12 +1,14 @@
 import type { ResourcesConfig } from "aws-amplify";
 
 const cognitoDomain = import.meta.env.VITE_COGNITO_DOMAIN;
+const cognitoUserPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID;
+const cognitoClientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
 
 export const awsConfig: ResourcesConfig = {
 	Auth: {
 		Cognito: {
-			userPoolClientId: "609767nccd4a58ukf3h3rdah7j",
-			userPoolId: "ap-southeast-1_uhJSMv7Ru",
+			userPoolClientId: cognitoClientId,
+			userPoolId: cognitoUserPoolId,
 
 			loginWith: {
 				email: true,

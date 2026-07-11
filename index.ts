@@ -30,10 +30,7 @@ const gatewaySystem = createApiGateway({
 });
 
 // 2.5. Frontend Hosting (S3 + CloudFront)
-const frontendSystem = createFrontendHosting({
-	apiEndpoint: gatewaySystem.httpApi.apiEndpoint,
-	cognitoDomain: auth.cognitoDomain,
-});
+const frontendSystem = createFrontendHosting();
 
 // 3. Mount Isolated Handlers onto Gateway Instance
 createUploadRoute({
@@ -95,4 +92,6 @@ export const cognitoClientId = auth.userPoolClient.id;
 export const cognitoDomain = auth.cognitoDomain;
 export const googleOAuthCallbackUrl = auth.googleCallbackUrl;
 export const publicApiEndpoint = gatewaySystem.httpApi.apiEndpoint;
+export const frontendBucketName = frontendSystem.bucket.bucket;
+export const frontendDistributionId = frontendSystem.distribution.id;
 export const frontendDomain = frontendSystem.distributionDomain;
