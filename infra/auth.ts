@@ -39,6 +39,7 @@ export function createAuth() {
             token_url: "https://github.com/login/oauth/access_token",
             attributes_url: "https://api.github.com/user",
             attributes_url_add_attributes: "false",
+            attributes_request_method: "GET",
             oidc_issuer: "https://github.com",
         },
         attributeMapping: {
