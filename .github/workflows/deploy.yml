@@ -42,7 +42,9 @@ jobs:
 
       - name: Deploy frontend to S3
         run: |
-          BUCKET=$(bunx pulumi stack output frontendBucketName)
-          DIST_ID=$(bunx pulumi stack output frontendDistributionId)
+          BUCKET=$(bunx pulumi stack output frontendBucketName --stack dev)
+          DIST_ID=$(bunx pulumi stack output frontendDistributionId --stack dev)
           aws s3 sync src/frontend/dist/ s3://$BUCKET/ --delete
           aws cloudfront create-invalidation --distribution-id $DIST_ID --paths /*
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
