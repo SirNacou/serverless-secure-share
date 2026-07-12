@@ -5,12 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	CalendarDays,
+	Check,
 	Clock,
 	CompassIcon,
 	Copy,
 	ExternalLink,
 	FileText,
 	Globe,
+	KeyRound,
 	LinkIcon,
 	Loader,
 	Lock,
@@ -74,6 +76,7 @@ function VisibilityBadge({ visibility }: { visibility: string }) {
 
 function ShareCard({ share }: { share: ShareListItem }) {
 	const [copied, setCopied] = useState(false);
+	const [copiedCode, setCopiedCode] = useState(false);
 	const shareUrl = `${window.location.origin}/s/${share.link_id}`;
 
 	const handleCopyLink = async () => {
@@ -84,6 +87,17 @@ function ShareCard({ share }: { share: ShareListItem }) {
 			setTimeout(() => setCopied(false), 2000);
 		} catch {
 			toast.error("Failed to copy link");
+		}
+	};
+
+	const handleCopyCode = async () => {
+		try {
+			await navigator.clipboard.writeText(share.link_id);
+			setCopiedCode(true);
+			toast.success("Code copied");
+			setTimeout(() => setCopiedCode(false), 2000);
+		} catch {
+			toast.error("Failed to copy code");
 		}
 	};
 
@@ -122,6 +136,21 @@ function ShareCard({ share }: { share: ShareListItem }) {
 			<div className="flex items-center gap-2 text-xs text-muted-foreground">
 				<User className="size-3" />
 				<span className="truncate">{share.owner_username || "—"}</span>
+			</div>
+
+			<div className="flex items-center gap-2 text-xs text-muted-foreground">
+				<KeyRound className="size-3" />
+				<code className="font-mono text-xs font-medium tracking-tight bg-muted/50 px-1 py-0.5 rounded border border-border/50">
+					{share.link_id}
+				</code>
+				<button
+					type="button"
+					onClick={handleCopyCode}
+					className="inline-flex items-center justify-center size-5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+					title="Copy code"
+				>
+					{copiedCode ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+				</button>
 			</div>
 
 			<div className="flex items-center gap-2 flex-wrap">

@@ -4,6 +4,7 @@ import {
 	ArrowUp,
 	ArrowUpDown,
 	Check,
+	Copy,
 	ExternalLink,
 	FileText,
 	Globe,
@@ -152,6 +153,33 @@ function CopyLinkButton({ shareId }: { shareId: string }) {
 		>
 			{copied ? <Check className="size-3.5 text-emerald-500" /> : <LinkIcon className="size-3.5" />}
 		</button>
+	);
+}
+
+export function CodeCell({ code }: { code: string }) {
+	const [copied, setCopied] = useState(false);
+
+	const handleCopy = () => {
+		navigator.clipboard.writeText(code);
+		setCopied(true);
+		toast.success("Code copied");
+		setTimeout(() => setCopied(false), 2000);
+	};
+
+	return (
+		<span className="inline-flex items-center gap-1.5">
+			<code className="text-xs font-mono font-medium tabular-nums tracking-tight bg-muted/50 px-1.5 py-0.5 rounded border border-border/50">
+				{code}
+			</code>
+			<button
+				type="button"
+				onClick={handleCopy}
+				className="inline-flex items-center justify-center size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0"
+				title="Copy code"
+			>
+				{copied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+			</button>
+		</span>
 	);
 }
 

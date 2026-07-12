@@ -3,6 +3,7 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { CalendarDays, Clock } from "lucide-react";
 import {
 	ActionsCell,
+	CodeCell,
 	formatAbsoluteExpiry,
 	formatDate,
 	formatRelativeTime,
@@ -22,6 +23,10 @@ export const activeColumns = [
 				{row.original.share_name}
 			</span>
 		),
+	}),
+	columnHelper.accessor("link_id", {
+		header: ({ column }) => <SortHeader column={column} label="Code" />,
+		cell: ({ row }) => <CodeCell code={row.original.link_id} />,
 	}),
 	columnHelper.accessor("asset_type", {
 		header: ({ column }) => <SortHeader column={column} label="Type" />,
@@ -92,6 +97,10 @@ export const historyColumns = [
 				{row.original.share_name}
 			</span>
 		),
+	}),
+	columnHelper.accessor("link_id", {
+		header: ({ column }) => <SortHeader column={column} label="Code" />,
+		cell: ({ row }) => <CodeCell code={row.original.link_id} />,
 	}),
 	columnHelper.accessor("asset_type", {
 		header: ({ column }) => <SortHeader column={column} label="Type" />,
