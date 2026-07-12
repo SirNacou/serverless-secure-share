@@ -34,11 +34,13 @@ jobs:
         working-directory: src/frontend
         run: |
           bun install
-          echo "VITE_API_ENDPOINT=$(bunx pulumi --cwd ../.. stack output publicApiEndpoint)" > .env
-          echo "VITE_COGNITO_DOMAIN=$(bunx pulumi --cwd ../.. stack output cognitoDomain)" >> .env
-          echo "VITE_COGNITO_USER_POOL_ID=$(bunx pulumi --cwd ../.. stack output cognitoPoolId)" >> .env
-          echo "VITE_COGNITO_CLIENT_ID=$(bunx pulumi --cwd ../.. stack output cognitoClientId)" >> .env
+          echo "VITE_API_ENDPOINT=$(bunx pulumi --cwd ../.. stack output publicApiEndpoint --stack dev)" > .env
+          echo "VITE_COGNITO_DOMAIN=$(bunx pulumi --cwd ../.. stack output cognitoDomain --stack dev)" >> .env
+          echo "VITE_COGNITO_USER_POOL_ID=$(bunx pulumi --cwd ../.. stack output cognitoPoolId --stack dev)" >> .env
+          echo "VITE_COGNITO_CLIENT_ID=$(bunx pulumi --cwd ../.. stack output cognitoClientId --stack dev)" >> .env
           bun run build
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
       - name: Deploy frontend to S3
         run: |
