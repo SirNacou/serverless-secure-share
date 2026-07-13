@@ -7,6 +7,7 @@ import { createApiGateway } from "./infra/compute/api/gateway";
 import { createUploadRoute } from "./infra/compute/api/upload";
 import { createActivityRoute } from "./infra/compute/api/activity";
 import { createExploreRoute } from "./infra/compute/api/explore";
+import { createProfileRoute } from "./infra/compute/api/profile";
 import { createWorkerCompute } from "./infra/compute/workers";
 import { createAuditWorker } from "./infra/compute/audit";
 import { createDatabase } from "./infra/database";
@@ -64,12 +65,19 @@ createShareInfoRoute({
 createExploreRoute({
 	httpApi: gatewaySystem.httpApi,
 	tableName: database.metadataTable.name,
+	profileTableName: database.userProfilesTable.name,
 });
 
 createActivityRoute({
 	httpApi: gatewaySystem.httpApi,
 	apiAuthorizer: gatewaySystem.apiAuthorizer,
 	auditTableName: database.auditTable.name,
+});
+
+createProfileRoute({
+	httpApi: gatewaySystem.httpApi,
+	apiAuthorizer: gatewaySystem.apiAuthorizer,
+	profileTableName: database.userProfilesTable.name,
 });
 
 // 4. Asynchronous Background Core Loop

@@ -4,6 +4,7 @@ import * as pulumi from "@pulumi/pulumi";
 interface ExploreArgs {
 	httpApi: aws.apigatewayv2.Api;
 	tableName: pulumi.Input<string>;
+	profileTableName: pulumi.Input<string>;
 }
 
 export function createExploreRoute(args: ExploreArgs) {
@@ -21,7 +22,7 @@ export function createExploreRoute(args: ExploreArgs) {
 
 	new aws.iam.RolePolicy("explore-dynamo-policy", {
 		role: lambdaRole.name,
-		policy: pulumi.all([args.tableName]).apply(([tableName]) =>
+		policy: pulumi.all([args.tableName, args.profileTableName]).apply(([tableName, profileTableName]) =>
 			JSON.stringify({
 				Version: "2012-10-17",
 				Statement: [
@@ -32,6 +33,11 @@ export function createExploreRoute(args: ExploreArgs) {
 							`arn:aws:dynamodb:*:*:table/${tableName}`,
 							`arn:aws:dynamodb:*:*:table/${tableName}/index/*`,
 						],
+					},
+					{
+						Effect: "Allow",
+						Action: ["dynamodb:GetItem", "dynamodb:BatchGetItem"],
+						Resource: [`arn:aws:dynamodb:*:*:table/${profileTableName}`],
 					},
 				],
 			}),
@@ -48,6 +54,7 @@ export function createExploreRoute(args: ExploreArgs) {
 		environment: {
 			variables: {
 				TABLE_NAME: args.tableName,
+				PROFILE_TABLE_NAME: args.profileTableName,
 			},
 		},
 	});

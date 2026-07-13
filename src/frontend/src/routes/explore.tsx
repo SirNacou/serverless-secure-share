@@ -135,7 +135,7 @@ function ShareCard({ share }: { share: ShareListItem }) {
 
 			<div className="flex items-center gap-2 text-xs text-muted-foreground">
 				<User className="size-3" />
-				<span className="truncate">{share.owner_username || "—"}</span>
+				<span className="truncate">{share.owner_display_name || share.owner_username || "—"}</span>
 			</div>
 
 			<div className="flex items-center gap-2 text-xs text-muted-foreground">

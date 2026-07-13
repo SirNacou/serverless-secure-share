@@ -1,8 +1,9 @@
-import { DynamoDBClient, QueryCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
+import { BatchGetItemCommand, DynamoDBClient, QueryCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
 
 const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION || "ap-southeast-1" });
 
 const TABLE_NAME = process.env.TABLE_NAME;
+const PROFILE_TABLE_NAME = process.env.PROFILE_TABLE_NAME;
 
 function decodeCognitoToken(authHeader) {
 	if (!authHeader) return null;
@@ -129,6 +130,34 @@ export const handler = async (event) => {
 			const bTime = b.created_at || 0;
 			return bTime - aTime;
 		});
+
+		// Resolve display names from user-profiles table
+		const uniqueOwners = [...new Set(shares.map((s) => s.owner_username).filter(Boolean))];
+		if (uniqueOwners.length > 0 && PROFILE_TABLE_NAME) {
+			const profileResult = await dynamoClient.send(
+				new BatchGetItemCommand({
+					RequestItems: {
+						[PROFILE_TABLE_NAME]: {
+							Keys: uniqueOwners.map((username) => ({ username: { S: username } })),
+							ProjectionExpression: "username, display_name",
+						},
+					},
+				}),
+			);
+
+			const displayNameMap = {};
+			for (const item of profileResult.Responses?.[PROFILE_TABLE_NAME] || []) {
+				if (item.username?.S && item.display_name?.S) {
+					displayNameMap[item.username.S] = item.display_name.S;
+				}
+			}
+
+			for (const share of shares) {
+				if (share.owner_username && displayNameMap[share.owner_username]) {
+					share.owner_display_name = displayNameMap[share.owner_username];
+				}
+			}
+		}
 
 		return {
 			statusCode: 200,

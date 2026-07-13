@@ -1,6 +1,6 @@
 import { useAuth } from "#/lib/auth-context";
 import { Link, useRouter } from "@tanstack/react-router";
-import { CompassIcon, HistoryIcon, LogOutIcon, ShareIcon } from "lucide-react";
+import { CompassIcon, HistoryIcon, LogOutIcon, ShareIcon, UserIcon } from "lucide-react";
 import { ModeToggle } from "./mode-toggle";
 import {
 	Sidebar,
@@ -74,6 +74,13 @@ const AppSidebar = (_props: Props) => {
 			<SidebarFooter>
 				<div className="flex items-center gap-1">
 					<ModeToggle />
+					<Link
+						to="/profile"
+						className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+					>
+						<UserIcon className="size-3.5" />
+						Profile
+					</Link>
 					<button
 						type="button"
 						onClick={async () => {

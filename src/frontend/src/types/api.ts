@@ -27,6 +27,12 @@ export interface ShareListItem {
 	filename?: string;
 	allowed_users?: string[];
 	owner_username?: string;
+	owner_display_name?: string;
+}
+
+export interface ProfileResponse {
+	username: string;
+	display_name: string | null;
 }
 
 export interface ShareListResponse {

@@ -33,6 +33,14 @@ export function createDatabase() {
 		],
 	});
 
+	const userProfilesTable = new aws.dynamodb.Table("user-profiles", {
+		attributes: [
+			{ name: "username", type: "S" },
+		],
+		hashKey: "username",
+		billingMode: "PAY_PER_REQUEST",
+	});
+
 	const auditTable = new aws.dynamodb.Table("audit-log", {
 		attributes: [
 			{ name: "log_id", type: "S" },
@@ -66,5 +74,5 @@ export function createDatabase() {
 		],
 	});
 
-	return { metadataTable, auditTable };
+	return { metadataTable, auditTable, userProfilesTable };
 }
