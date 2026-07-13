@@ -131,7 +131,7 @@ export const handler = async (event) => {
 			return bTime - aTime;
 		});
 
-		// Resolve display names from user-profiles table
+		// Resolve display names and emails from user-profiles table
 		const uniqueOwners = [...new Set(shares.map((s) => s.owner_username).filter(Boolean))];
 		if (uniqueOwners.length > 0 && PROFILE_TABLE_NAME) {
 			const profileResult = await dynamoClient.send(
@@ -139,22 +139,27 @@ export const handler = async (event) => {
 					RequestItems: {
 						[PROFILE_TABLE_NAME]: {
 							Keys: uniqueOwners.map((username) => ({ username: { S: username } })),
-							ProjectionExpression: "username, display_name",
+							ProjectionExpression: "username, display_name, email",
 						},
 					},
 				}),
 			);
 
-			const displayNameMap = {};
+			const profileMap = {};
 			for (const item of profileResult.Responses?.[PROFILE_TABLE_NAME] || []) {
-				if (item.username?.S && item.display_name?.S) {
-					displayNameMap[item.username.S] = item.display_name.S;
+				if (item.username?.S) {
+					profileMap[item.username.S] = {
+						display_name: item.display_name?.S || null,
+						email: item.email?.S || null,
+					};
 				}
 			}
 
 			for (const share of shares) {
-				if (share.owner_username && displayNameMap[share.owner_username]) {
-					share.owner_display_name = displayNameMap[share.owner_username];
+				if (share.owner_username && profileMap[share.owner_username]) {
+					const profile = profileMap[share.owner_username];
+					if (profile.display_name) share.owner_display_name = profile.display_name;
+					if (profile.email) share.owner_email = profile.email;
 				}
 			}
 		}

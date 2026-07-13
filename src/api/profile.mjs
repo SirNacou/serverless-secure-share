@@ -37,7 +37,9 @@ function validateDisplayName(name) {
 
 export const handler = async (event) => {
 	try {
-		const username = event.requestContext?.authorizer?.jwt?.claims?.username;
+		const claims = event.requestContext?.authorizer?.jwt?.claims;
+		const username = claims?.username;
+		const email = claims?.email;
 
 		if (!username) {
 			return errorResponse(401, "Unauthorized");
@@ -56,8 +58,23 @@ export const handler = async (event) => {
 			);
 
 			const displayName = result.Item?.display_name?.S || null;
+			const storedEmail = result.Item?.email?.S || null;
 
-			return successResponse({ username, display_name: displayName });
+			// Auto-seed email from JWT if not yet stored
+			if (email && !storedEmail) {
+				await dynamoClient.send(
+					new PutItemCommand({
+						TableName: PROFILE_TABLE_NAME,
+						Item: {
+							username: { S: username },
+							email: { S: email },
+							updated_at: { N: Math.floor(Date.now() / 1000).toString() },
+						},
+					}),
+				);
+			}
+
+			return successResponse({ username, email: storedEmail || email || null, display_name: displayName });
 		}
 
 		if (method === "PUT") {
@@ -71,18 +88,23 @@ export const handler = async (event) => {
 
 			const trimmed = displayName.trim();
 
+			const item = {
+				username: { S: username },
+				display_name: { S: trimmed },
+				updated_at: { N: Math.floor(Date.now() / 1000).toString() },
+			};
+			if (email) {
+				item.email = { S: email };
+			}
+
 			await dynamoClient.send(
 				new PutItemCommand({
 					TableName: PROFILE_TABLE_NAME,
-					Item: {
-						username: { S: username },
-						display_name: { S: trimmed },
-						updated_at: { N: Math.floor(Date.now() / 1000).toString() },
-					},
+					Item: item,
 				}),
 			);
 
-			return successResponse({ username, display_name: trimmed });
+			return successResponse({ username, email: email || null, display_name: trimmed });
 		}
 
 		return errorResponse(405, "Method not allowed");

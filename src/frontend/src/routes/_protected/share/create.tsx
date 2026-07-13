@@ -33,18 +33,25 @@ const shareFormSchema = z
 		selectedUsers: z.array(z.string()),
 		lifespan: z.string(),
 		maxDownloads: z.string(),
-		customId: z
-			.string()
-			.refine(
-				(val) => {
-					if (!val) return true;
-					if (val.length < 4 || val.length > 64) return false;
-					if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{2,62}[a-zA-Z0-9]$/.test(val)) return false;
-					if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val)) return false;
-					return true;
-				},
-				{ message: "4-64 chars, only letters, numbers, hyphens, underscores. No UUID patterns." },
-			),
+		customId: z.string().refine(
+			(val) => {
+				if (!val) return true;
+				if (val.length < 4 || val.length > 64) return false;
+				if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{2,62}[a-zA-Z0-9]$/.test(val))
+					return false;
+				if (
+					/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+						val,
+					)
+				)
+					return false;
+				return true;
+			},
+			{
+				message:
+					"4-64 chars, only letters, numbers, hyphens, underscores. No UUID patterns.",
+			},
+		),
 	})
 	.superRefine((data, ctx) => {
 		if (data.payloadType === "file" && data.files.length < 1) {
@@ -70,7 +77,7 @@ const defaultValues: ShareFormValues = {
 	payloadType: "file",
 	files: [],
 	textContent: "",
-	visibility: "private",
+	visibility: "public",
 	selectedUsers: [],
 	lifespan: lifespanOptions[0].value,
 	maxDownloads: maxDownloadsOptions[0].value,
@@ -269,9 +276,13 @@ function RouteComponent() {
 								{isCustom && errorMsg ? (
 									<p className="text-[11px] text-destructive">{errorMsg}</p>
 								) : isCustom ? (
-									<p className="text-[11px] text-emerald-500">Custom ID looks good</p>
+									<p className="text-[11px] text-emerald-500">
+										Custom ID looks good
+									</p>
 								) : (
-									<p className="text-[11px] text-muted-foreground">Leave empty for auto-generated short ID</p>
+									<p className="text-[11px] text-muted-foreground">
+										Leave empty for auto-generated short ID
+									</p>
 								)}
 							</div>
 						);
