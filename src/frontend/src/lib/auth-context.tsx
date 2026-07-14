@@ -11,6 +11,8 @@ import {
 } from "aws-amplify/auth";
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
+import { api } from "#/lib/api";
+import type { ProfileResponse } from "#/types/api";
 
 interface AuthContextValue {
 	user: unknown | null;
@@ -30,6 +32,25 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+async function ensureDisplayName() {
+	try {
+		const profile = await api.get("api/profile").json<ProfileResponse>();
+		if (profile.display_name) return;
+
+		const session = await fetchAuthSession();
+		const email = session.tokens?.idToken?.payload?.email as string | undefined;
+		if (!email) return;
+
+		const localPart = email.split("@")[0];
+		const baseName = localPart.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40);
+		if (!baseName) return;
+
+		await api.put("api/profile", { json: { display_name: baseName, auto_generated: true } });
+	} catch {
+		// Silent — auto-generation is a best-effort convenience
+	}
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
 	const [user, setUser] = useState<AuthContextValue["user"]>(null);
 	const [isLoading, setIsLoading] = useState(true);
@@ -42,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 				if (session.tokens?.accessToken) {
 					const currentUser = await getCurrentUser();
 					setUser(currentUser as AuthContextValue["user"]);
+					ensureDisplayName();
 				}
 			} catch {
 				setUser(null);
@@ -64,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			if (result.isSignedIn) {
 				const currentUser = await getCurrentUser();
 				setUser(currentUser as AuthContextValue["user"]);
+				ensureDisplayName();
 			}
 		} catch (err: unknown) {
 			const message =

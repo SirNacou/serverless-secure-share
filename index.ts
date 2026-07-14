@@ -78,6 +78,7 @@ createProfileRoute({
 	httpApi: gatewaySystem.httpApi,
 	apiAuthorizer: gatewaySystem.apiAuthorizer,
 	profileTableName: database.userProfilesTable.name,
+	displayNamesTableName: database.displayNamesTable.name,
 });
 
 // 4. Asynchronous Background Core Loop

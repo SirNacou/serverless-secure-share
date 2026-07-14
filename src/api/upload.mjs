@@ -142,7 +142,7 @@ await dynamoClient.send(
 				TableName: process.env.TABLE_NAME,
 				Item: {
 					link_id: { S: linkId },
-					share_name: { S: safeShareName }, // <-- SAVE TO DYNAMODB
+					share_name: { S: safeShareName },
 					owner_username: { S: ownerUsername },
 					asset_type: { S: "TEXT" },
 					payload_text: { S: textContent },
@@ -177,7 +177,7 @@ await dynamoClient.send(
 				TableName: process.env.TABLE_NAME,
 				Item: {
 					link_id: { S: linkId },
-					share_name: { S: safeShareName }, // <-- SAVE TO DYNAMODB
+					share_name: { S: safeShareName },
 					owner_username: { S: ownerUsername },
 					asset_type: { S: "FILE" },
 					fileKey: { S: s3ObjectKey },

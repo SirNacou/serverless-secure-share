@@ -5,6 +5,7 @@ interface ProfileArgs {
 	httpApi: aws.apigatewayv2.Api;
 	apiAuthorizer: aws.apigatewayv2.Authorizer;
 	profileTableName: pulumi.Input<string>;
+	displayNamesTableName: pulumi.Input<string>;
 }
 
 export function createProfileRoute(args: ProfileArgs) {
@@ -22,7 +23,7 @@ export function createProfileRoute(args: ProfileArgs) {
 
 	new aws.iam.RolePolicy("profile-dynamo-policy", {
 		role: lambdaRole.name,
-		policy: pulumi.all([args.profileTableName]).apply(([profileTableName]) =>
+		policy: pulumi.all([args.profileTableName, args.displayNamesTableName]).apply(([profileTableName, displayNamesTableName]) =>
 			JSON.stringify({
 				Version: "2012-10-17",
 				Statement: [
@@ -30,6 +31,11 @@ export function createProfileRoute(args: ProfileArgs) {
 						Effect: "Allow",
 						Action: ["dynamodb:GetItem", "dynamodb:PutItem"],
 						Resource: [`arn:aws:dynamodb:*:*:table/${profileTableName}`],
+					},
+					{
+						Effect: "Allow",
+						Action: ["dynamodb:PutItem", "dynamodb:DeleteItem"],
+						Resource: [`arn:aws:dynamodb:*:*:table/${displayNamesTableName}`],
 					},
 				],
 			}),
@@ -46,6 +52,7 @@ export function createProfileRoute(args: ProfileArgs) {
 		environment: {
 			variables: {
 				PROFILE_TABLE_NAME: args.profileTableName,
+				DISPLAY_NAMES_TABLE_NAME: args.displayNamesTableName,
 			},
 		},
 	});

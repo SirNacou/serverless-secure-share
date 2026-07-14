@@ -41,6 +41,14 @@ export function createDatabase() {
 		billingMode: "PAY_PER_REQUEST",
 	});
 
+	const displayNamesTable = new aws.dynamodb.Table("display-names", {
+		attributes: [
+			{ name: "display_name", type: "S" },
+		],
+		hashKey: "display_name",
+		billingMode: "PAY_PER_REQUEST",
+	});
+
 	const auditTable = new aws.dynamodb.Table("audit-log", {
 		attributes: [
 			{ name: "log_id", type: "S" },
@@ -74,5 +82,5 @@ export function createDatabase() {
 		],
 	});
 
-	return { metadataTable, auditTable, userProfilesTable };
+	return { metadataTable, auditTable, userProfilesTable, displayNamesTable };
 }

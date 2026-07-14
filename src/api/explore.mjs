@@ -139,27 +139,23 @@ export const handler = async (event) => {
 					RequestItems: {
 						[PROFILE_TABLE_NAME]: {
 							Keys: uniqueOwners.map((username) => ({ username: { S: username } })),
-							ProjectionExpression: "username, display_name, email",
+							ProjectionExpression: "username, display_name",
+							ConsistentRead: true,
 						},
 					},
 				}),
 			);
 
-			const profileMap = {};
+			const displayNameMap = {};
 			for (const item of profileResult.Responses?.[PROFILE_TABLE_NAME] || []) {
-				if (item.username?.S) {
-					profileMap[item.username.S] = {
-						display_name: item.display_name?.S || null,
-						email: item.email?.S || null,
-					};
+				if (item.username?.S && item.display_name?.S) {
+					displayNameMap[item.username.S] = item.display_name.S;
 				}
 			}
 
 			for (const share of shares) {
-				if (share.owner_username && profileMap[share.owner_username]) {
-					const profile = profileMap[share.owner_username];
-					if (profile.display_name) share.owner_display_name = profile.display_name;
-					if (profile.email) share.owner_email = profile.email;
+				if (share.owner_username && displayNameMap[share.owner_username]) {
+					share.owner_display_name = displayNameMap[share.owner_username];
 				}
 			}
 		}
