@@ -11,7 +11,7 @@ export function createApiGateway(args: GatewayArgs) {
     protocolType: "HTTP",
     corsConfiguration: {
       allowOrigins: ["http://localhost:3000", "https://share.apps.nacou.dev"],
-      allowMethods: ["POST", "GET", "OPTIONS"],
+      allowMethods: ["POST", "GET", "PUT", "OPTIONS"],
       allowHeaders: ["content-type", "authorization"],
       maxAge: 300,
     },
