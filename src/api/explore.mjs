@@ -47,8 +47,7 @@ function matchesSearch(entry, query) {
 	const q = query.toLowerCase();
 	return (
 		(entry.share_name && entry.share_name.toLowerCase().includes(q)) ||
-		(entry.link_id && entry.link_id.toLowerCase().includes(q)) ||
-		(entry.owner_username && entry.owner_username.toLowerCase().includes(q))
+		(entry.link_id && entry.link_id.toLowerCase().includes(q))
 	);
 }
 
