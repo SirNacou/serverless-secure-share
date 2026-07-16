@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TestRouteImport } from './routes/test'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as ProtectedRouteRouteImport } from './routes/_protected/route'
@@ -21,6 +22,11 @@ import { Route as ProtectedHistoryRouteImport } from './routes/_protected/histor
 import { Route as ProtectedShareIndexRouteImport } from './routes/_protected/share/index'
 import { Route as ProtectedShareCreateRouteImport } from './routes/_protected/share/create'
 
+const TestRoute = TestRouteImport.update({
+  id: '/test',
+  path: '/test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/': typeof ProtectedIndexRoute
   '/explore': typeof ExploreRoute
   '/login': typeof LoginRoute
+  '/test': typeof TestRoute
   '/history': typeof ProtectedHistoryRoute
   '/profile': typeof ProtectedProfileRoute
   '/share': typeof ProtectedShareRouteWithChildren
@@ -91,6 +98,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/explore': typeof ExploreRoute
   '/login': typeof LoginRoute
+  '/test': typeof TestRoute
   '/history': typeof ProtectedHistoryRoute
   '/profile': typeof ProtectedProfileRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/_protected': typeof ProtectedRouteRouteWithChildren
   '/explore': typeof ExploreRoute
   '/login': typeof LoginRoute
+  '/test': typeof TestRoute
   '/_protected/history': typeof ProtectedHistoryRoute
   '/_protected/profile': typeof ProtectedProfileRoute
   '/_protected/share': typeof ProtectedShareRouteWithChildren
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/'
     | '/explore'
     | '/login'
+    | '/test'
     | '/history'
     | '/profile'
     | '/share'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
   to:
     | '/explore'
     | '/login'
+    | '/test'
     | '/history'
     | '/profile'
     | '/auth/callback'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/_protected'
     | '/explore'
     | '/login'
+    | '/test'
     | '/_protected/history'
     | '/_protected/profile'
     | '/_protected/share'
@@ -156,12 +168,20 @@ export interface RootRouteChildren {
   ProtectedRouteRoute: typeof ProtectedRouteRouteWithChildren
   ExploreRoute: typeof ExploreRoute
   LoginRoute: typeof LoginRoute
+  TestRoute: typeof TestRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   SShareIdRoute: typeof SShareIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/test': {
+      id: '/test'
+      path: '/test'
+      fullPath: '/test'
+      preLoaderRoute: typeof TestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -278,6 +298,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProtectedRouteRoute: ProtectedRouteRouteWithChildren,
   ExploreRoute: ExploreRoute,
   LoginRoute: LoginRoute,
+  TestRoute: TestRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   SShareIdRoute: SShareIdRoute,
 }
