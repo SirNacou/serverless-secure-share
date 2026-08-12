@@ -1,0 +1,8 @@
+config:
+  aws:region: ap-southeast-1
+  cloudflare:apiToken:
+    secure: AAABANg6XjmYC8J+HYhdBae64atY/VRBCNTJbrpdK6Btzt+oXgNkCOWDWHNK1Mn1n5oGv63jdKk1ZNJfWmTZTG4OyYbV1v3srzAyRs8Sgm/adGCv7g==
+  google:clientId:
+    secure: AAABAIFGfd/uzpkjJy6AhTQ2sqjFC0TabYnsr3+6YnwcOBssziJmzqKq0Yrt6UN9PFVRuyvV1BG63HNnm+6qPms6Dx806HpDamB5FBbIiEgbj3rJZ0Yam4CDcd+n03tcuq+R4Eqom5s=
+  google:clientSecret:
+    secure: AAABAMpsZ0QW1iq9E6sUD0I/drPlnBlpCFcYw8n1JwRa55Xl/NWpdzXPLbQYroyiBr+QYD2CeMnHMdVcFZD2z73cCw==
