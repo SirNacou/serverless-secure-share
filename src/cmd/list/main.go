@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"time"
 
+	"github.com/SirNacou/serverless-secure-share/internal/models"
+	"github.com/SirNacou/serverless-secure-share/internal/utils"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -16,60 +18,40 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-var (
-	headers = map[string]string{
-		"Content-Type":                "application/json",
-		"Access-Control-Allow-Origin": "*",
-	}
-	dynamoClient *dynamodb.Client
-	tableName    string
-)
+type App struct {
+	dbClient  *dynamodb.Client
+	tableName string
+}
 
-type ShareItem struct {
-	LinkID        string   `dynamodbav:"link_id" json:"link_id"`
-	ShareName     string   `dynamodbav:"share_name" json:"share_name"`
-	AssetType     string   `dynamodbav:"asset_type" json:"asset_type"`
-	Visibility    string   `dynamodbav:"visibility" json:"visibility"`
-	CreatedAt     *int64   `dynamodbav:"created_at" json:"created_at"`
-	Filename      *string  `dynamodbav:"filename" json:"filename"`
-	AllowedUsers  []string `dynamodbav:"allowed_users" json:"allowed_users"`
-	OwnerUsername string   `dynamodbav:"owner_username" json:"owner_username"`
-	TTL           *int64   `dynamodbav:"ttl,omitempty" json:"ttl,omitempty"`
-	MaxDownloads  *int     `dynamodbav:"max_downloads,omitempty" json:"max_downloads,omitempty"`
-	DownloadCount int      `dynamodbav:"download_count" json:"download_count"`
-	Status        string   `dynamodbav:"status" json:"status"`
+func newApp(ctx context.Context) (*App, error) {
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load AWS config: %w", err)
+	}
+
+	return &App{
+		dbClient:  dynamodb.NewFromConfig(cfg),
+		tableName: os.Getenv("TABLE_NAME"),
+	}, nil
 }
 
 type SuccessResponse struct {
-	Shares []ShareItem `json:"shares"`
-	Count  int         `json:"count"`
+	Shares []models.ShareItem `json:"shares"`
+	Count  int                `json:"count"`
 }
 
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
-
-func init() {
-	tableName = os.Getenv("TABLE_NAME")
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		log.Fatalf("unable to load default config, %v", err)
-	}
-	dynamoClient = dynamodb.NewFromConfig(cfg)
-}
-
-func handler(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+func (a *App) HandleRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	if event.RequestContext.Authorizer == nil || event.RequestContext.Authorizer.JWT == nil {
-		return jsonResponse(401, ErrorResponse{Error: "Unauthorized"})
+		return utils.JsonResponse(401, models.ErrorResponse{Error: "Unauthorized"})
 	}
 
 	username, ok := event.RequestContext.Authorizer.JWT.Claims["username"]
 	if !ok {
-		return jsonResponse(401, ErrorResponse{Error: "Unauthorized"})
+		return utils.JsonResponse(401, models.ErrorResponse{Error: "Unauthorized"})
 	}
 
-	output, err := dynamoClient.Query(ctx, &dynamodb.QueryInput{
-		TableName:              &tableName,
+	output, err := a.dbClient.Query(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String(a.tableName),
 		IndexName:              aws.String("by_owner"),
 		KeyConditionExpression: aws.String("owner_username = :username"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
@@ -78,13 +60,13 @@ func handler(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.
 	})
 	if err != nil {
 		log.Printf("List shares error: %v", err)
-		return jsonResponse(500, ErrorResponse{Error: "Internal server error"})
+		return utils.JsonResponse(500, models.ErrorResponse{Error: "Internal server error"})
 	}
 
-	shares := make([]ShareItem, 0)
+	shares := make([]models.ShareItem, 0)
 	if err := attributevalue.UnmarshalListOfMaps(output.Items, &shares); err != nil {
-		log.Printf("Umarshall error: %v", err)
-		return jsonResponse(500, ErrorResponse{Error: "Internal server error"})
+		log.Printf("Unmarshall error: %v", err)
+		return utils.JsonResponse(500, models.ErrorResponse{Error: "Internal server error"})
 	}
 
 	now := time.Now().Unix()
@@ -96,26 +78,18 @@ func handler(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.
 		}
 	}
 
-	return jsonResponse(200, SuccessResponse{
+	return utils.JsonResponse(200, SuccessResponse{
 		Shares: shares,
 		Count:  len(shares),
 	})
 }
 
-func jsonResponse(statusCode int, payload any) (events.APIGatewayV2HTTPResponse, error) {
-	body, err := json.Marshal(payload)
+func main() {
+	ctx := context.Background()
+	app, err := newApp(ctx)
 	if err != nil {
-		body = []byte(`{"error": "Internal server error"}`)
-		statusCode = 500
+		log.Fatalf("Failed to initialize application: %v", err)
 	}
 
-	return events.APIGatewayV2HTTPResponse{
-		StatusCode: statusCode,
-		Headers:    headers,
-		Body:       string(body),
-	}, nil
-}
-
-func main() {
-	lambda.Start(handler)
+	lambda.Start(app.HandleRequest)
 }

@@ -2,43 +2,49 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"slices"
 	"time"
 
+	"github.com/SirNacou/serverless-secure-share/internal/models"
+	"github.com/SirNacou/serverless-secure-share/internal/utils"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-var (
-	headers = map[string]string{
-		"Content-Type":                "application/json",
-		"Access-Control-Allow-Origin": "*",
-	}
-	dynamoClient *dynamodb.Client
-	tableName    string
-)
+type App struct {
+	dbClient  *dynamodb.Client
+	verifier  *utils.Verifier
+	tableName string
+}
 
-type ShareItem struct {
-	LinkID        string   `dynamodbav:"link_id" json:"link_id"`
-	ShareName     string   `dynamodbav:"share_name" json:"share_name"`
-	AssetType     string   `dynamodbav:"asset_type" json:"asset_type"`
-	Visibility    string   `dynamodbav:"visibility" json:"visibility"`
-	CreatedAt     *int64   `dynamodbav:"created_at" json:"created_at"`
-	Filename      *string  `dynamodbav:"filename" json:"filename"`
-	AllowedUsers  []string `dynamodbav:"allowed_users" json:"allowed_users"`
-	OwnerUsername string   `dynamodbav:"owner_username" json:"owner_username"`
-	TTL           *int64   `dynamodbav:"ttl,omitempty" json:"ttl,omitempty"`
-	MaxDownloads  *int     `dynamodbav:"max_downloads,omitempty" json:"max_downloads,omitempty"`
-	DownloadCount int      `dynamodbav:"download_count" json:"download_count"`
-	Status        string   `dynamodbav:"status" json:"status"`
-	PayloadText   *string  `dynamodbav:"payload_text" json:"payload_text"`
+func newApp(ctx context.Context) (*App, error) {
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load AWS config: %w", err)
+	}
+
+	region := os.Getenv("AWS_REGION")
+	userPoolID := os.Getenv("COGNITO_USER_POOL_ID")
+	clientID := os.Getenv("COGNITO_CLIENT_ID")
+
+	verifier, err := utils.NewVerifier(ctx, region, userPoolID, clientID)
+	if err != nil {
+		log.Printf("warning: unable to create verifier: %v", err)
+	}
+
+	return &App{
+		dbClient:  dynamodb.NewFromConfig(cfg),
+		verifier:  verifier,
+		tableName: os.Getenv("TABLE_NAME"),
+	}, nil
 }
 
 type ShareInfoResponse struct {
@@ -49,11 +55,11 @@ type ShareInfoResponse struct {
 	Status        string  `json:"status"`
 	DownloadCount int64   `json:"download_count"`
 	MaxDownloads  *int64  `json:"max_downloads"`
-	PayloadText   *string `json:"payload_text,omitempty"` // TEXT only
-	Filename      *string `json:"filename,omitempty"`     // FILE only
+	PayloadText   *string `json:"payload_text,omitempty"`
+	Filename      *string `json:"filename,omitempty"`
 }
 
-func NewShareInfoResponse(share *ShareItem) ShareInfoResponse {
+func newShareInfoResponse(share *models.ShareItem) ShareInfoResponse {
 	if share.ShareName == "" {
 		share.ShareName = "Untitled Share"
 	}
@@ -75,86 +81,59 @@ func NewShareInfoResponse(share *ShareItem) ShareInfoResponse {
 	}
 }
 
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
-
-func init() {
-	tableName = os.Getenv("TABLE_NAME")
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		log.Fatalf("unable to load default config, %v", err)
-	}
-	dynamoClient = dynamodb.NewFromConfig(cfg)
-}
-
-func handler(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+func (a *App) HandleRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	linkID, ok := event.PathParameters["shareId"]
 	if !ok {
-		return jsonResponse(400, ErrorResponse{Error: "Missing link identifier."})
+		return utils.JsonResponse(400, models.ErrorResponse{Error: "Missing link identifier."})
 	}
 
-	authorizer := event.RequestContext.Authorizer
-	username := ""
-	if authorizer != nil && authorizer.JWT != nil {
-		username = authorizer.JWT.Claims["username"]
-	}
+	username := a.verifier.UsernameFromRequest(event.Headers)
 
-	output, err := dynamoClient.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: &tableName,
+	output, err := a.dbClient.GetItem(ctx, &dynamodb.GetItemInput{
+		TableName: aws.String(a.tableName),
 		Key: map[string]types.AttributeValue{
 			"link_id": &types.AttributeValueMemberS{Value: linkID},
 		},
 	})
-
 	if err != nil {
 		log.Printf("Get item error: %v", err)
-		return jsonResponse(500, ErrorResponse{Error: "Internal server error"})
+		return utils.JsonResponse(500, models.ErrorResponse{Error: "Internal server error"})
 	}
 
 	if output.Item == nil {
-		return jsonResponse(404, ErrorResponse{Error: "Resource not found or expired."})
+		return utils.JsonResponse(404, models.ErrorResponse{Error: "Resource not found or expired."})
 	}
-	share := new(ShareItem)
+	share := new(models.ShareItem)
 	if err := attributevalue.UnmarshalMap(output.Item, share); err != nil {
 		log.Printf("Unmarshall error: %v", err)
-		return jsonResponse(500, ErrorResponse{Error: "Internal server error"})
+		return utils.JsonResponse(500, models.ErrorResponse{Error: "Internal server error"})
 	}
 
 	if share.TTL != nil && *share.TTL < time.Now().Unix() {
-		return jsonResponse(404, ErrorResponse{Error: "Resource has expired."})
+		return utils.JsonResponse(404, models.ErrorResponse{Error: "Resource has expired."})
 	}
 
 	if share.Visibility == "private" {
 		if username == "" {
-			return jsonResponse(403, ErrorResponse{Error: "Resource is private."})
+			return utils.JsonResponse(403, models.ErrorResponse{Error: "Access Denied: Private asset authorization header missing."})
 		}
 
 		isOwned := share.OwnerUsername == username
 		isAllowed := slices.Contains(share.AllowedUsers, username)
 		if !isOwned && !isAllowed {
-			return jsonResponse(403, ErrorResponse{Error: "Access Denied: User identity not authorized to read this share."})
+			return utils.JsonResponse(403, models.ErrorResponse{Error: "Access Denied: User identity not authorized to read this share."})
 		}
 	}
 
-	return jsonResponse(200, NewShareInfoResponse(share))
-
-}
-
-func jsonResponse(statusCode int, payload any) (events.APIGatewayV2HTTPResponse, error) {
-	body, err := json.Marshal(payload)
-	if err != nil {
-		body = []byte(`{"error": "Internal server error"}`)
-		statusCode = 500
-	}
-
-	return events.APIGatewayV2HTTPResponse{
-		StatusCode: statusCode,
-		Headers:    headers,
-		Body:       string(body),
-	}, nil
+	return utils.JsonResponse(200, newShareInfoResponse(share))
 }
 
 func main() {
-	lambda.Start(handler)
+	ctx := context.Background()
+	app, err := newApp(ctx)
+	if err != nil {
+		log.Fatalf("Failed to initialize application: %v", err)
+	}
+
+	lambda.Start(app.HandleRequest)
 }
