@@ -36,16 +36,16 @@ var (
 )
 
 type CreateShareRequest struct {
-	Name          string   `json:"name"`
-	PayloadType   string   `json:"payloadType"`
-	Filename      string   `json:"filename"`
-	ContentType   string   `json:"contentType"`
-	TextContent   string   `json:"textContent"`
-	Visibility    string   `json:"visibility"`
-	TargetUsers   []string `json:"targetUsers"`
-	LifespanHours int64    `json:"lifespanHours"`
-	MaxDownloads  *int64   `json:"maxDownloads"`
-	CustomID      string   `json:"customId"`
+	Name          string      `json:"name"`
+	PayloadType   string      `json:"payloadType"`
+	Filename      string      `json:"filename"`
+	ContentType   string      `json:"contentType"`
+	TextContent   string      `json:"textContent"`
+	Visibility    string      `json:"visibility"`
+	TargetUsers   []string    `json:"targetUsers"`
+	LifespanHours interface{} `json:"lifespanHours"`
+	MaxDownloads  interface{} `json:"maxDownloads"`
+	CustomID      string      `json:"customId"`
 }
 type CreateShareResponse struct {
 	UploadID   string `json:"uploadId"`
@@ -182,6 +182,25 @@ func sanitizeFilename(filename string) string {
 	return sanitizeRegex.ReplaceAllString(base, "_")
 }
 
+func toInt64(v interface{}) int64 {
+	switch val := v.(type) {
+	case float64:
+		return int64(val)
+	case int64:
+		return val
+	case int:
+		return int64(val)
+	case string:
+		n, err := strconv.ParseInt(val, 10, 64)
+		if err != nil {
+			return 0
+		}
+		return n
+	default:
+		return 0
+	}
+}
+
 func (a *App) HandleRequest(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	ownerUsername := extractUsername(event.RequestContext)
 	if ownerUsername == "" {
@@ -189,8 +208,35 @@ func (a *App) HandleRequest(ctx context.Context, event events.APIGatewayV2HTTPRe
 	}
 
 	var req CreateShareRequest
-	if err := json.Unmarshal([]byte(event.Body), &req); err != nil {
-		return utils.JsonResponse(400, models.ErrorResponse{Error: "Invalid JSON request body"})
+	log.Printf("DEBUG: event.Body = [%s]", event.Body)
+
+	body := event.Body
+	if len(body) > 0 && body[0] == '[' {
+		var arr []CreateShareRequest
+		if err := json.Unmarshal([]byte(body), &arr); err != nil {
+			log.Printf("DEBUG: array unmarshal error: %v", err)
+			return utils.JsonResponse(400, models.ErrorResponse{Error: "Invalid JSON request body"})
+		}
+		if len(arr) == 0 {
+			return utils.JsonResponse(400, models.ErrorResponse{Error: "Empty request body"})
+		}
+		req = arr[0]
+	} else {
+		if err := json.Unmarshal([]byte(body), &req); err != nil {
+			log.Printf("DEBUG: unmarshal error: %v", err)
+			return utils.JsonResponse(400, models.ErrorResponse{Error: "Invalid JSON request body"})
+		}
+	}
+
+	lifespanHours := toInt64(req.LifespanHours)
+	if lifespanHours <= 0 {
+		lifespanHours = 1
+	}
+
+	var maxDownloads *int64
+	if req.MaxDownloads != nil {
+		n := toInt64(req.MaxDownloads)
+		maxDownloads = &n
 	}
 
 	var linkID string
@@ -220,7 +266,7 @@ func (a *App) HandleRequest(ctx context.Context, event events.APIGatewayV2HTTPRe
 	}
 
 	now := time.Now().Unix()
-	ttlTimestamp := now + (req.LifespanHours * 3600)
+	ttlTimestamp := now + (lifespanHours * 3600)
 
 	itemMap := map[string]types.AttributeValue{
 		"link_id":        &types.AttributeValueMemberS{Value: linkID},
@@ -238,8 +284,8 @@ func (a *App) HandleRequest(ctx context.Context, event events.APIGatewayV2HTTPRe
 		itemMap["allowed_users"] = &types.AttributeValueMemberNULL{Value: true}
 	}
 
-	if req.MaxDownloads != nil {
-		itemMap["max_downloads"] = &types.AttributeValueMemberN{Value: strconv.FormatInt(*req.MaxDownloads, 10)}
+	if maxDownloads != nil && *maxDownloads > 0 {
+		itemMap["max_downloads"] = &types.AttributeValueMemberN{Value: strconv.FormatInt(*maxDownloads, 10)}
 	}
 
 	if req.PayloadType == "text" {
