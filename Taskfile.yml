@@ -29,16 +29,29 @@ tasks:
   build-one:
     desc: Build a single Lambda handler
     cmds:
-      - powershell -Command "New-Item -ItemType Directory -Path '{{.BUILD_DIR}}/{{.HANDLER}}' -Force | Out-Null"
-      - powershell -Command "Set-Location '{{.SRC_DIR}}'; $env:GOOS='linux'; $env:GOARCH='amd64'; $env:CGO_ENABLED='0'; go build -tags lambda.norpc -o '../{{.BUILD_DIR}}/{{.HANDLER}}/bootstrap' './cmd/{{.HANDLER}}'"
-      - powershell -Command "Compress-Archive -Path '{{.BUILD_DIR}}/{{.HANDLER}}/bootstrap' -DestinationPath '{{.BUILD_DIR}}/{{.HANDLER}}/bootstrap.zip' -Force"
+      - cmd: mkdir -p {{.BUILD_DIR}}/{{.HANDLER}}
+        platforms: [linux, darwin]
+      - cmd: powershell -Command "New-Item -ItemType Directory -Path '{{.BUILD_DIR}}/{{.HANDLER}}' -Force | Out-Null"
+        platforms: [windows]
+      - cmd: cd {{.SRC_DIR}} && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags lambda.norpc -o '../{{.BUILD_DIR}}/{{.HANDLER}}/bootstrap' './cmd/{{.HANDLER}}'
+        platforms: [linux, darwin]
+      - cmd: powershell -Command "Set-Location '{{.SRC_DIR}}'; $env:GOOS='linux'; $env:GOARCH='amd64'; $env:CGO_ENABLED='0'; go build -tags lambda.norpc -o '../{{.BUILD_DIR}}/{{.HANDLER}}/bootstrap' './cmd/{{.HANDLER}}'"
+        platforms: [windows]
+      - cmd: cd {{.BUILD_DIR}}/{{.HANDLER}} && zip bootstrap.zip bootstrap
+        platforms: [linux, darwin]
+      - cmd: powershell -Command "Compress-Archive -Path '{{.BUILD_DIR}}/{{.HANDLER}}/bootstrap' -DestinationPath '{{.BUILD_DIR}}/{{.HANDLER}}/bootstrap.zip' -Force"
+        platforms: [windows]
       - echo "Built {{.BUILD_DIR}}/{{.HANDLER}}/bootstrap.zip"
     requires:
       vars: [HANDLER]
 
   clean:
     desc: Remove build artifacts
-    cmd: powershell -Command "Remove-Item -Recurse -Force '{{.BUILD_DIR}}' -ErrorAction SilentlyContinue"
+    cmds:
+      - cmd: rm -rf {{.BUILD_DIR}}
+        platforms: [linux, darwin]
+      - cmd: powershell -Command "Remove-Item -Recurse -Force '{{.BUILD_DIR}}' -ErrorAction SilentlyContinue"
+        platforms: [windows]
 
   validate:
     desc: Run tofu validate

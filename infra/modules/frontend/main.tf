@@ -8,7 +8,7 @@ resource "aws_acm_certificate" "frontend" {
 }
 
 # ── Cloudflare DNS Validation CNAME ───────────────────────────────
-resource "cloudflare_record" "acm_validation" {
+resource "cloudflare_dns_record" "acm_validation" {
   zone_id = var.cloudflare_zone_id
   name    = tolist(aws_acm_certificate.frontend.domain_validation_options)[0].resource_record_name
   type    = "CNAME"
@@ -22,7 +22,7 @@ resource "aws_acm_certificate_validation" "frontend" {
   provider = aws.us_east_1
 
   certificate_arn         = aws_acm_certificate.frontend.arn
-  validation_record_fqdns = [cloudflare_record.acm_validation.hostname]
+  validation_record_fqdns = [cloudflare_dns_record.acm_validation.name]
 }
 
 # ── Frontend S3 Bucket ────────────────────────────────────────────
@@ -129,7 +129,7 @@ resource "aws_cloudfront_distribution" "frontend" {
 data "aws_caller_identity" "current" {}
 
 # ── Cloudflare DNS CNAME for CloudFront ───────────────────────────
-resource "cloudflare_record" "frontend" {
+resource "cloudflare_dns_record" "frontend" {
   zone_id = var.cloudflare_zone_id
   name    = "share.apps"
   type    = "CNAME"

@@ -17,7 +17,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.26'
 
       - uses: arduino/setup-task@v2
         with:
@@ -25,7 +25,7 @@ jobs:
 
       - uses: opentofu/setup-opentofu@v1
         with:
-          tofu_version: '1.7.0'
+          tofu_version: '1.9.0'
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -38,33 +38,27 @@ jobs:
       - name: Deploy infrastructure
         working-directory: infra
         run: |
-          tofu init
-          tofu apply -auto-approve
+          tofu init -input=false
+          tofu apply -auto-approve -input=false
         env:
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_zone_id: ${{ secrets.CLOUDFLARE_ZONE_ID }}
           TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
           TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ap-south-1
 
       - name: Build frontend
-        working-directory: src/frontend
+        working-directory: src/frontend/frontend
         run: |
           npm install
-          echo "VITE_API_ENDPOINT=$(cd ../infra && tofu output -raw api_endpoint)" > .env
-          echo "VITE_COGNITO_DOMAIN=$(cd ../infra && tofu output -raw cognito_domain)" >> .env
-          echo "VITE_COGNITO_USER_POOL_ID=$(cd ../infra && tofu output -raw cognito_pool_id)" >> .env
-          echo "VITE_COGNITO_CLIENT_ID=$(cd ../infra && tofu output -raw cognito_client_id)" >> .env
+          echo "VITE_API_ENDPOINT=$(cd ../../../infra && tofu output -raw api_endpoint)" > .env
+          echo "VITE_COGNITO_DOMAIN=$(cd ../../../infra && tofu output -raw cognito_domain)" >> .env
+          echo "VITE_COGNITO_USER_POOL_ID=$(cd ../../../infra && tofu output -raw cognito_pool_id)" >> .env
+          echo "VITE_COGNITO_CLIENT_ID=$(cd ../../../infra && tofu output -raw cognito_client_id)" >> .env
           npm run build
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ap-south-1
 
       - name: Deploy frontend to S3
         run: |
           BUCKET=$(cd infra && tofu output -raw frontend_bucket_name 2>/dev/null || echo "")
           DIST_ID=$(cd infra && tofu output -raw frontend_distribution_id)
-          aws s3 sync src/frontend/dist/ s3://$BUCKET/ --delete
+          aws s3 sync src/frontend/frontend/dist/ s3://$BUCKET/ --delete
           aws cloudfront create-invalidation --distribution-id $DIST_ID --paths /*
