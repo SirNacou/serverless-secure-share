@@ -22,17 +22,6 @@ variable "domain_name" {
   default     = "share.apps.nacou.dev"
 }
 
-variable "cloudflare_zone_id" {
-  description = "Cloudflare zone ID for DNS records"
-  type        = string
-}
-
-variable "cloudflare_api_token" {
-  description = "Cloudflare API token for DNS management"
-  type        = string
-  sensitive   = true
-}
-
 variable "google_client_id" {
   description = "Google OAuth client ID for Cognito"
   type        = string

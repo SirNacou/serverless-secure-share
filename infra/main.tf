@@ -7,10 +7,6 @@ provider "aws" {
   region = "us-east-1"
 }
 
-provider "cloudflare" {
-  api_token = var.cloudflare_api_token
-}
-
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
@@ -99,11 +95,10 @@ module "workers" {
 module "frontend" {
   source = "./modules/frontend"
 
-  project_name      = var.project_name
-  environment       = var.environment
-  domain_name       = var.domain_name
-  aws_region        = var.aws_region
-  cloudflare_zone_id = var.cloudflare_zone_id
+  project_name = var.project_name
+  environment  = var.environment
+  domain_name  = var.domain_name
+  aws_region   = var.aws_region
 
   providers = {
     aws.us_east_1 = aws.us_east_1

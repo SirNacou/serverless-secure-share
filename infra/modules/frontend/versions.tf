@@ -7,9 +7,5 @@ terraform {
       version = ">= 6.60"
       configuration_aliases = [aws.us_east_1]
     }
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = ">= 5.0"
-    }
   }
 }

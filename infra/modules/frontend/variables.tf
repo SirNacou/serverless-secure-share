@@ -17,8 +17,3 @@ variable "aws_region" {
   description = "AWS region (for provider alias passthrough)"
   type        = string
 }
-
-variable "cloudflare_zone_id" {
-  description = "Cloudflare zone ID for DNS validation CNAME record"
-  type        = string
-}

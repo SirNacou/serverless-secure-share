@@ -8,21 +8,15 @@ resource "aws_acm_certificate" "frontend" {
 }
 
 # ── Cloudflare DNS Validation CNAME ───────────────────────────────
-resource "cloudflare_dns_record" "acm_validation" {
-  zone_id = var.cloudflare_zone_id
-  name    = tolist(aws_acm_certificate.frontend.domain_validation_options)[0].resource_record_name
-  type    = "CNAME"
-  content = tolist(aws_acm_certificate.frontend.domain_validation_options)[0].resource_record_value
-  ttl     = 1
-  proxied = false
-}
+# Managed outside tofu — created manually during initial cert provisioning.
+# The Cloudflare v5 provider normalises names with trailing dots which
+# causes a perpetual diff the API rejects as "record already exists".
 
 # ── Wait for certificate validation ────────────────────────────────
 resource "aws_acm_certificate_validation" "frontend" {
   provider = aws.us_east_1
 
-  certificate_arn         = aws_acm_certificate.frontend.arn
-  validation_record_fqdns = [cloudflare_dns_record.acm_validation.name]
+  certificate_arn = aws_acm_certificate.frontend.arn
 }
 
 # ── Frontend S3 Bucket ────────────────────────────────────────────
@@ -129,11 +123,5 @@ resource "aws_cloudfront_distribution" "frontend" {
 data "aws_caller_identity" "current" {}
 
 # ── Cloudflare DNS CNAME for CloudFront ───────────────────────────
-resource "cloudflare_dns_record" "frontend" {
-  zone_id = var.cloudflare_zone_id
-  name    = "share.apps"
-  type    = "CNAME"
-  content = aws_cloudfront_distribution.frontend.domain_name
-  ttl     = 1
-  proxied = false
-}
+# Managed outside tofu — created manually to avoid Cloudflare v5
+# trailing-dot perpetual diff issue.
