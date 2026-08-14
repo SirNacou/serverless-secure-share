@@ -1,0 +1,9 @@
+# aws_region      = "ap-southeast-1"
+# project_name    = "serverless-secure-share"
+# environment     = "dev"
+# domain_name     = "share.apps.nacou.dev"
+
+cloudflare_zone_id = "a01e2f3659cec1b9910a300f5c01518e"
+# cloudflare_api_token = ""
+# google_client_id     = ""
+# google_client_secret = ""

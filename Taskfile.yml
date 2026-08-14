@@ -1,0 +1,56 @@
+version: '3'
+
+vars:
+  HANDLERS:
+    - activity
+    - audit-logger
+    - download
+    - explore
+    - list
+    - profile
+    - s3-sync
+    - share-info
+    - upload
+  BUILD_DIR: infra/build/lambda
+  SRC_DIR: src
+
+tasks:
+  default:
+    desc: Build all Lambda functions
+    cmds:
+      - task: build-lambda
+
+  build-lambda:
+    desc: Cross-compile all Go Lambda handlers into ZIP artifacts
+    cmds:
+      - for: { var: HANDLERS }
+        cmd: task build-one HANDLER={{.ITEM}}
+
+  build-one:
+    desc: Build a single Lambda handler
+    cmds:
+      - powershell -Command "New-Item -ItemType Directory -Path '{{.BUILD_DIR}}/{{.HANDLER}}' -Force | Out-Null"
+      - powershell -Command "Set-Location '{{.SRC_DIR}}'; $env:GOOS='linux'; $env:GOARCH='amd64'; $env:CGO_ENABLED='0'; go build -tags lambda.norpc -o '../{{.BUILD_DIR}}/{{.HANDLER}}/bootstrap' './cmd/{{.HANDLER}}'"
+      - powershell -Command "Compress-Archive -Path '{{.BUILD_DIR}}/{{.HANDLER}}/bootstrap' -DestinationPath '{{.BUILD_DIR}}/{{.HANDLER}}/bootstrap.zip' -Force"
+      - echo "Built {{.BUILD_DIR}}/{{.HANDLER}}/bootstrap.zip"
+    requires:
+      vars: [HANDLER]
+
+  clean:
+    desc: Remove build artifacts
+    cmd: powershell -Command "Remove-Item -Recurse -Force '{{.BUILD_DIR}}' -ErrorAction SilentlyContinue"
+
+  validate:
+    desc: Run tofu validate
+    dir: infra
+    cmd: tofu validate
+
+  plan:
+    desc: Run tofu plan
+    dir: infra
+    cmd: tofu plan
+
+  apply:
+    desc: Run tofu apply
+    dir: infra
+    cmd: tofu apply -auto-approve

@@ -15,38 +15,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: '1.7.0'
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ap-southeast-1
 
-      - name: Install dependencies
-        run: bun install
+      - name: Build Lambda functions
+        run: task build-lambda
 
       - name: Deploy infrastructure
-        run: bunx pulumi up --stack dev --yes
+        working-directory: infra
+        run: |
+          tofu init
+          tofu apply -auto-approve
         env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+          TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
 
       - name: Build frontend
         working-directory: src/frontend
         run: |
-          bun install
-          echo "VITE_API_ENDPOINT=$(bunx pulumi --cwd ../.. stack output publicApiEndpoint --stack dev)" > .env
-          echo "VITE_COGNITO_DOMAIN=$(bunx pulumi --cwd ../.. stack output cognitoDomain --stack dev)" >> .env
-          echo "VITE_COGNITO_USER_POOL_ID=$(bunx pulumi --cwd ../.. stack output cognitoPoolId --stack dev)" >> .env
-          echo "VITE_COGNITO_CLIENT_ID=$(bunx pulumi --cwd ../.. stack output cognitoClientId --stack dev)" >> .env
-          bun run build
+          npm install
+          echo "VITE_API_ENDPOINT=$(cd ../infra && tofu output -raw api_endpoint)" > .env
+          echo "VITE_COGNITO_DOMAIN=$(cd ../infra && tofu output -raw cognito_domain)" >> .env
+          echo "VITE_COGNITO_USER_POOL_ID=$(cd ../infra && tofu output -raw cognito_pool_id)" >> .env
+          echo "VITE_COGNITO_CLIENT_ID=$(cd ../infra && tofu output -raw cognito_client_id)" >> .env
+          npm run build
         env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
 
       - name: Deploy frontend to S3
         run: |
-          BUCKET=$(bunx pulumi stack output frontendBucketName --stack dev)
-          DIST_ID=$(bunx pulumi stack output frontendDistributionId --stack dev)
+          BUCKET=$(cd infra && tofu output -raw frontend_bucket_name 2>/dev/null || echo "")
+          DIST_ID=$(cd infra && tofu output -raw frontend_distribution_id)
           aws s3 sync src/frontend/dist/ s3://$BUCKET/ --delete
           aws cloudfront create-invalidation --distribution-id $DIST_ID --paths /*
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
