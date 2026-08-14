@@ -9,6 +9,7 @@ vars:
     - list
     - profile
     - s3-sync
+    - profile-put
     - share-info
     - upload
   BUILD_DIR: infra/build/lambda
