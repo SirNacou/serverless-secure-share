@@ -23,6 +23,11 @@ output "frontend_distribution_id" {
   value       = module.frontend.distribution_id
 }
 
+output "frontend_bucket_name" {
+  description = "Frontend S3 bucket name"
+  value       = module.frontend.bucket_name
+}
+
 output "frontend_domain" {
   description = "Frontend CloudFront domain"
   value       = module.frontend.distribution_domain
